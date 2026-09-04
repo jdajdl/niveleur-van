@@ -55,6 +55,8 @@
   svg .wheel.fixe{fill:#131a22;stroke:var(--go);stroke-width:1.9}
   svg .role-fixe .bnum{fill:var(--go);font-size:11px}
   svg .role-susp .bnum{fill:var(--faint);font-size:11px}
+  svg .wheel.ignored{fill:#3a4650;stroke:#5A6673;stroke-width:1.2}
+  svg .xcross line{stroke:#9aa6b3;stroke-width:2.6;stroke-linecap:round}
   svg .bnum{fill:#0E1319;font-family:var(--num);font-weight:700;font-size:16px;text-anchor:middle}
   svg .bunit{fill:#0E1319;font-family:var(--num);font-weight:600;font-size:9px;text-anchor:middle;opacity:.8}
   svg .center-txt{fill:var(--go);font-family:var(--num);font-weight:700;font-size:15px;text-anchor:middle}
@@ -119,6 +121,10 @@
       <g id="b-rl" style="display:none"><text class="bnum" x="57" y="366">0</text><text class="bunit" x="57" y="382">cm</text></g>
       <g id="b-rr" style="display:none"><text class="bnum" x="263" y="366">0</text><text class="bunit" x="263" y="382">cm</text></g>
       <text id="centerTxt" class="center-txt" x="160" y="255" style="display:none">de niveau</text>
+      <g id="x-fl" class="xcross" style="display:none"><line x1="46" y1="98" x2="68" y2="150"/><line x1="68" y1="98" x2="46" y2="150"/></g>
+      <g id="x-fr" class="xcross" style="display:none"><line x1="252" y1="98" x2="274" y2="150"/><line x1="274" y1="98" x2="252" y2="150"/></g>
+      <g id="x-rl" class="xcross" style="display:none"><line x1="46" y1="342" x2="68" y2="394"/><line x1="68" y1="342" x2="46" y2="394"/></g>
+      <g id="x-rr" class="xcross" style="display:none"><line x1="252" y1="342" x2="274" y2="394"/><line x1="274" y1="342" x2="252" y2="394"/></g>
       <text class="grid" x="160" y="74" text-anchor="middle" style="font-size:11px;fill:#3a4650;font-family:var(--num)">AV</text>
       <circle id="ball" cx="160" cy="250" r="22" fill="url(#gAmber)"/>
     </svg>
@@ -176,9 +182,9 @@
       <details>
         <summary>Comment ça marche et limites</summary>
         <div class="note">
-          <p><b>Le van est le niveau.</b> La bille roule vers le point bas. Cale les 2 pneus surlignés en orange — toujours une paire réelle (les 2 avant, les 2 arrière, ou les 2 d'un même côté), à la hauteur affichée (identique sur les deux). Les 2 pneus verts « fixe » restent au sol : n'y touche pas.</p>
+          <p><b>Le van est le niveau.</b> La bille roule vers le point bas. Cale les 2 pneus <b>orange</b> à la hauteur affichée sur chacun (elles peuvent différer). Pneu <b>vert</b> (« réf »/« fixe ») : référence, on n'y touche pas. Pneu <b>gris barré</b> : ignoré — il reste au sol via la suspension (léger délestage).</p>
           <p><b>Calcul.</b> Hauteur = distance entre roues × tan(angle). Roulis → voie × tan. Tangage → empattement × tan.</p>
-          <p><b>2 cales, 1 axe.</b> On ne cale qu'une paire réelle (même essieu avant/arrière, ou même côté gauche/droite) — jamais en diagonale, qu'on ne pourrait pas monter en roulant. Une paire corrige donc un seul axe, à hauteur égale ; l'autre inclinaison reste (en partie absorbée par la suspension). L'app choisit l'axe qui laisse la plus petite pente. Mettre les deux axes parfaitement à plat exigerait une 3ᵉ cale.</p>
+          <p><b>Sol incliné 2 sens : calage sur 3 points.</b> On prend appui sur 3 roues : la plus haute sert de référence (rien), deux roues d'une même paire réelle (un côté ou un essieu) sont calées — à deux hauteurs — pour rejoindre son niveau, et la 4ᵉ roue est ignorée (grise barrée), au sol via la suspension. Les deux axes passent à plat. La roue la plus basse peut demander une cale élevée (jusqu'à voie×tan + empattement×tan) ; au-delà du maximum réglé elle est plafonnée et la pente restante est affichée. Si un seul axe est incliné, l'app pose 2 cales égales et garde les 4 roues au sol.</p>
           <p><b>Limite de hauteur.</b> Si la cale dépasse le maximum réglé, l'app le plafonne, réduit au mieux et affiche l'inclinaison restante.</p>
           <p><b>Précision.</b> Capteurs ≈ ±1°. Pose le téléphone bien à plat, haut vers l'avant. Le signe varie selon les modèles : fie-toi à la bille, corrige avec les inversions.</p>
           <p><b>Sécurité.</b> Frein à main, cales centrées, montée lente, re-vérifie avant de te garer.</p>
@@ -266,9 +272,17 @@
     return{roll:liveRoll,pitch:livePitch};
   }
 
-  /* calcul : on cale une PAIRE réelle (avant, arrière, gauche ou droite) — jamais en diagonale.
-     Une paire corrige un seul axe (mêmes hauteurs). On choisit l'axe qui laisse le moins de pente. */
+  /* calcul : sol incliné 2 sens = calage sur 3 POINTS.
+     Réf = roue la plus haute (rien). On cale une paire RÉELLE (côté ou essieu) à 2 hauteurs
+     pour rejoindre son niveau. La 4e roue est ignorée : au sol via la suspension.
+     Un seul axe incliné → 2 cales égales, 4 roues au sol. */
   function wid(side,end){return side==='gauche'?(end==='avant'?'w-fl':'w-rl'):(end==='avant'?'w-fr':'w-rr');}
+  function planeResid(p1,p2,p3){
+    const ux=p2.x-p1.x,uy=p2.y-p1.y,uz=p2.z-p1.z, vx=p3.x-p1.x,vy=p3.y-p1.y,vz=p3.z-p1.z;
+    const nx=uy*vz-uz*vy, ny=uz*vx-ux*vz, nz=ux*vy-uy*vx;
+    if(Math.abs(nz)<1e-9) return{worst:0};
+    return{worst:Math.max(Math.atan(Math.abs(ny/nz))/D2R, Math.atan(Math.abs(nx/nz))/D2R)};
+  }
   function compute(){
     const L=Math.max(1,parseFloat($('wb').value)||0);
     const W=Math.max(1,parseFloat($('tr').value)||0);
@@ -280,26 +294,36 @@
     const highSide=lowSide==='droite'?'gauche':'droite';
     const highEnd =lowEnd==='avant'?'arrière':'avant';
     const level=rA<TOL&&pA<TOL;
+    const R=W*Math.tan(rA*D2R), P=L*Math.tan(pA*D2R);
     const cap=(need,dist)=>{const applied=Math.min(need,maxH);return{applied,resid:Math.atan(Math.max(0,need-applied)/dist)/D2R,capped:need>maxH+1e-9};};
-    const hRoll=W*Math.tan(rA*D2R), hPitch=L*Math.tan(pA*D2R);
-    let chocks=[],refs=[],mode2='level',worst=0,anyCapped=false;
+    const pos=(s,e)=>({x:(e==='avant'?L/2:-L/2),y:(s==='droite'?W/2:-W/2)});
+    const znat=(s,e)=>((s===highSide?R/2:-R/2)+(e===highEnd?P/2:-P/2));
+    let chocks=[],refs=[],ignored=null,mode2='level',worst=0,anyCapped=false;
     if(!level){
-      const cRoll=cap(hRoll,W), cPitch=cap(hPitch,L);
-      const wRoll=Math.max(cRoll.resid,pA), wPitch=Math.max(cPitch.resid,rA);  // pente restante selon l'axe corrigé
-      const doRoll=(wRoll<wPitch)||(wRoll===wPitch && rA>=pA);
-      if(doRoll){                                   // corrige le roulis : 2 cales côté bas, gauche ou droite
-        mode2='side'; worst=wRoll; anyCapped=cRoll.capped;
-        chocks=[{wheel:wid(lowSide,'avant'),height:cRoll.applied,capped:cRoll.capped},
-                {wheel:wid(lowSide,'arrière'),height:cRoll.applied,capped:cRoll.capped}];
+      if(pA<TOL){                                 // roulis seul : paire côté bas (égales)
+        const c=cap(R,W); mode2='side'; worst=c.resid; anyCapped=c.capped;
+        chocks=[{wheel:wid(lowSide,'avant'),height:c.applied},{wheel:wid(lowSide,'arrière'),height:c.applied}];
         refs=[wid(highSide,'avant'),wid(highSide,'arrière')];
-      }else{                                        // corrige le tangage : 2 cales sur l'essieu bas, avant ou arrière
-        mode2='end'; worst=wPitch; anyCapped=cPitch.capped;
-        chocks=[{wheel:wid('gauche',lowEnd),height:cPitch.applied,capped:cPitch.capped},
-                {wheel:wid('droite',lowEnd),height:cPitch.applied,capped:cPitch.capped}];
+      }else if(rA<TOL){                           // tangage seul : paire essieu bas (égales)
+        const c=cap(P,L); mode2='end'; worst=c.resid; anyCapped=c.capped;
+        chocks=[{wheel:wid('gauche',lowEnd),height:c.applied},{wheel:wid('droite',lowEnd),height:c.applied}];
         refs=[wid('gauche',highEnd),wid('droite',highEnd)];
+      }else{                                      // compound : 3 points
+        mode2='tripod';
+        const sidePair=rA>=pA;
+        const a={s:lowSide,e:lowEnd,need:R+P};    // roue la plus basse : cale la plus haute
+        const b=sidePair?{s:lowSide,e:highEnd,need:R}:{s:highSide,e:lowEnd,need:P};
+        ignored=sidePair?wid(highSide,lowEnd):wid(lowSide,highEnd);
+        [a,b].forEach(k=>{k.applied=Math.min(k.need,maxH);k.capped=k.need>maxH+1e-9;});
+        const p1={...pos(highSide,highEnd),z:znat(highSide,highEnd)};
+        const p2={...pos(a.s,a.e),z:znat(a.s,a.e)+a.applied};
+        const p3={...pos(b.s,b.e),z:znat(b.s,b.e)+b.applied};
+        worst=planeResid(p1,p2,p3).worst; anyCapped=a.capped||b.capped;
+        chocks=[{wheel:wid(a.s,a.e),height:a.applied},{wheel:wid(b.s,b.e),height:b.applied}];
+        refs=[wid(highSide,highEnd)];
       }
     }
-    return{L,W,maxH,rA,pA,lowSide,lowEnd,level,mode2,chocks,refs,susp:null,worst,anyCapped};
+    return{L,W,maxH,rA,pA,lowSide,lowEnd,level,mode2,chocks,refs,ignored,worst,anyCapped};
   }
 
   let pending=false;
@@ -308,7 +332,8 @@
   function setStatus(t,cls){const s=$('status');s.textContent=t;s.className='status-line'+(cls?' '+cls:'');}
   function badges(){return{'w-fl':'b-fl','w-fr':'b-fr','w-rl':'b-rl','w-rr':'b-rr'}}
   function clearWheels(){
-    ['w-fl','w-fr','w-rl','w-rr'].forEach(id=>$(id).classList.remove('hot','hotbad','susp','fixe'));
+    ['w-fl','w-fr','w-rl','w-rr'].forEach(id=>$(id).classList.remove('hot','hotbad','susp','fixe','ignored'));
+    ['x-fl','x-fr','x-rl','x-rr'].forEach(id=>{const g=$(id);if(g)g.style.display='none';});
     ['b-fl','b-fr','b-rl','b-rr'].forEach(id=>{const g=$(id);g.style.display='none';g.classList.remove('role-chock','role-fixe','role-susp');const u=g.querySelector('.bunit');if(u)u.style.display='';});
   }
 
@@ -348,14 +373,16 @@
       const u=g.querySelector('.bunit'); if(unit){u.style.display='';u.textContent=unit;} else {u.style.display='none';}
     }
     c.chocks.forEach(ch=>{ $(ch.wheel).classList.add(strong?'hotbad':'hot'); label(ch.wheel,'role-chock',f1(ch.height),'cm'); });
-    (c.refs||[]).forEach(id=>{ $(id).classList.add('fixe'); label(id,'role-fixe','fixe'); });
-    if(c.susp){ $(c.susp).classList.add('susp'); label(c.susp,'role-susp','susp'); }
+    (c.refs||[]).forEach(id=>{ $(id).classList.add('fixe'); label(id,'role-fixe', c.mode2==='tripod'?'réf':'fixe'); });
+    if(c.ignored){ $(c.ignored).classList.add('ignored'); const x=$('x'+c.ignored.slice(1)); if(x)x.style.display=''; }
 
     if(c.worst<TOL && !c.anyCapped){
-      setStatus('À plat une fois calé','ok');
+      setStatus('À plat une fois calé'+(c.mode2==='tripod'?' · 1 roue ignorée (pend)':''),'ok');
     }else{
-      let t='Restera ~'+f1(c.worst)+'° '+(c.mode2==='side'?'avant-arrière':'gauche-droite');
+      let t='Restera ~'+f1(c.worst)+'°';
+      if(c.mode2==='side') t+=' avant-arrière'; else if(c.mode2==='end') t+=' gauche-droite';
       if(c.anyCapped) t+=' (cale plafonnée à '+f1(c.maxH)+' cm)';
+      if(c.mode2==='tripod') t+=' · 1 roue ignorée';
       setStatus(t, strong?'bad':'warn');
     }
   }
