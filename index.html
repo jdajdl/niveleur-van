@@ -176,9 +176,9 @@
       <details>
         <summary>Comment ça marche et limites</summary>
         <div class="note">
-          <p><b>Le van est le niveau.</b> La bille roule vers le point bas. Cale les pneus surlignés en orange à la hauteur affichée sur chacun (les deux cales peuvent différer). Le pneu marqué « fixe » (vert) est la référence : n'y touche pas.</p>
+          <p><b>Le van est le niveau.</b> La bille roule vers le point bas. Cale les 2 pneus surlignés en orange — toujours une paire réelle (les 2 avant, les 2 arrière, ou les 2 d'un même côté), à la hauteur affichée (identique sur les deux). Les 2 pneus verts « fixe » restent au sol : n'y touche pas.</p>
           <p><b>Calcul.</b> Hauteur = distance entre roues × tan(angle). Roulis → voie × tan. Tangage → empattement × tan.</p>
-          <p><b>2 cales, 2 hauteurs.</b> Sol incliné dans les deux sens : on cale les deux roues de la diagonale intermédiaire à des hauteurs différentes (voie × tan pour l'une, empattement × tan pour l'autre). Les deux axes passent à plat autour du pneu « fixe » (le plus haut). Le pneu de la diagonale opposée (le plus bas, tireté) reste au sol, porté par la suspension. Si un seul axe est incliné, l'app pose 2 cales égales de ce côté et garde les 4 roues chargées.</p>
+          <p><b>2 cales, 1 axe.</b> On ne cale qu'une paire réelle (même essieu avant/arrière, ou même côté gauche/droite) — jamais en diagonale, qu'on ne pourrait pas monter en roulant. Une paire corrige donc un seul axe, à hauteur égale ; l'autre inclinaison reste (en partie absorbée par la suspension). L'app choisit l'axe qui laisse la plus petite pente. Mettre les deux axes parfaitement à plat exigerait une 3ᵉ cale.</p>
           <p><b>Limite de hauteur.</b> Si la cale dépasse le maximum réglé, l'app le plafonne, réduit au mieux et affiche l'inclinaison restante.</p>
           <p><b>Précision.</b> Capteurs ≈ ±1°. Pose le téléphone bien à plat, haut vers l'avant. Le signe varie selon les modèles : fie-toi à la bille, corrige avec les inversions.</p>
           <p><b>Sécurité.</b> Frein à main, cales centrées, montée lente, re-vérifie avant de te garer.</p>
@@ -266,7 +266,8 @@
     return{roll:liveRoll,pitch:livePitch};
   }
 
-  /* calcul : 2 cales de hauteurs indépendantes, roue fixe + roue sur suspension */
+  /* calcul : on cale une PAIRE réelle (avant, arrière, gauche ou droite) — jamais en diagonale.
+     Une paire corrige un seul axe (mêmes hauteurs). On choisit l'axe qui laisse le moins de pente. */
   function wid(side,end){return side==='gauche'?(end==='avant'?'w-fl':'w-rl'):(end==='avant'?'w-fr':'w-rr');}
   function compute(){
     const L=Math.max(1,parseFloat($('wb').value)||0);
@@ -275,34 +276,30 @@
     const {roll,pitch}=activeAngles();
     const rA=Math.abs(roll),pA=Math.abs(pitch);
     let lowSide=(roll>=0)?'droite':'gauche'; if(flipLR)lowSide=(lowSide==='droite')?'gauche':'droite';
-    let lowEnd=(pitch>=0)?'avant':'arrière'; if(flipFB)lowEnd=(lowEnd==='avant')?'arrière':'avant';
+    let lowEnd=(pitch>=0)?'arrière':'avant'; if(flipFB)lowEnd=(lowEnd==='avant')?'arrière':'avant';  // AV/AR inversé par défaut
     const highSide=lowSide==='droite'?'gauche':'droite';
     const highEnd =lowEnd==='avant'?'arrière':'avant';
     const level=rA<TOL&&pA<TOL;
     const cap=(need,dist)=>{const applied=Math.min(need,maxH);return{applied,resid:Math.atan(Math.max(0,need-applied)/dist)/D2R,capped:need>maxH+1e-9};};
     const hRoll=W*Math.tan(rA*D2R), hPitch=L*Math.tan(pA*D2R);
-    let chocks=[],refs=[],susp=null,mode2='level',worst=0;
+    let chocks=[],refs=[],mode2='level',worst=0,anyCapped=false;
     if(!level){
-      if(pA<TOL){                              // roulis seul : 2 cales égales côté bas, 4 roues au sol
-        const c=cap(hRoll,W); mode2='side'; worst=c.resid;
-        chocks=[{wheel:wid(lowSide,'avant'),height:c.applied,capped:c.capped},
-                {wheel:wid(lowSide,'arrière'),height:c.applied,capped:c.capped}];
+      const cRoll=cap(hRoll,W), cPitch=cap(hPitch,L);
+      const wRoll=Math.max(cRoll.resid,pA), wPitch=Math.max(cPitch.resid,rA);  // pente restante selon l'axe corrigé
+      const doRoll=(wRoll<wPitch)||(wRoll===wPitch && rA>=pA);
+      if(doRoll){                                   // corrige le roulis : 2 cales côté bas, gauche ou droite
+        mode2='side'; worst=wRoll; anyCapped=cRoll.capped;
+        chocks=[{wheel:wid(lowSide,'avant'),height:cRoll.applied,capped:cRoll.capped},
+                {wheel:wid(lowSide,'arrière'),height:cRoll.applied,capped:cRoll.capped}];
         refs=[wid(highSide,'avant'),wid(highSide,'arrière')];
-      }else if(rA<TOL){                        // tangage seul : 2 cales égales à l'extrémité basse
-        const c=cap(hPitch,L); mode2='end'; worst=c.resid;
-        chocks=[{wheel:wid('gauche',lowEnd),height:c.applied,capped:c.capped},
-                {wheel:wid('droite',lowEnd),height:c.applied,capped:c.capped}];
+      }else{                                        // corrige le tangage : 2 cales sur l'essieu bas, avant ou arrière
+        mode2='end'; worst=wPitch; anyCapped=cPitch.capped;
+        chocks=[{wheel:wid('gauche',lowEnd),height:cPitch.applied,capped:cPitch.capped},
+                {wheel:wid('droite',lowEnd),height:cPitch.applied,capped:cPitch.capped}];
         refs=[wid('gauche',highEnd),wid('droite',highEnd)];
-      }else{                                   // compound : diagonale intermédiaire, 2 hauteurs
-        const cA=cap(hRoll,W), cB=cap(hPitch,L); mode2='diag'; worst=Math.max(cA.resid,cB.resid);
-        chocks=[{wheel:wid(lowSide,highEnd),height:cA.applied,capped:cA.capped},
-                {wheel:wid(highSide,lowEnd),height:cB.applied,capped:cB.capped}];
-        refs=[wid(highSide,highEnd)];          // roue la plus haute = fixe (référence)
-        susp=wid(lowSide,lowEnd);              // roue la plus basse = portée par la suspension
       }
     }
-    const anyCapped=chocks.some(c=>c.capped);
-    return{L,W,maxH,rA,pA,lowSide,lowEnd,level,mode2,chocks,refs,susp,worst,anyCapped};
+    return{L,W,maxH,rA,pA,lowSide,lowEnd,level,mode2,chocks,refs,susp:null,worst,anyCapped};
   }
 
   let pending=false;
@@ -354,13 +351,11 @@
     (c.refs||[]).forEach(id=>{ $(id).classList.add('fixe'); label(id,'role-fixe','fixe'); });
     if(c.susp){ $(c.susp).classList.add('susp'); label(c.susp,'role-susp','susp'); }
 
-    const suspNote = c.mode2==='diag' ? ' · roue basse sur suspension' : '';
     if(c.worst<TOL && !c.anyCapped){
-      setStatus('À plat une fois calé'+suspNote,'ok');
+      setStatus('À plat une fois calé','ok');
     }else{
-      let t='Restera ~'+f1(c.worst)+'°';
+      let t='Restera ~'+f1(c.worst)+'° '+(c.mode2==='side'?'avant-arrière':'gauche-droite');
       if(c.anyCapped) t+=' (cale plafonnée à '+f1(c.maxH)+' cm)';
-      t+=suspNote;
       setStatus(t, strong?'bad':'warn');
     }
   }
