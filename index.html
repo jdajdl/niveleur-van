@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0E1319">
+<title>Niveleur van</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Niveleur">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0E1319; --panel:#161D26; --panel2:#1E2732; --line:#2A3542;
+    --ink:#EAF0F6; --mut:#8A97A5; --faint:#5A6673;
+    --go:#5FD08A; --go-dim:#22553B;
+    --warn:#F0A64B; --warn-dim:#5C4220;
+    --bad:#E8705B; --bad-dim:#5A2822;
+    --num:'Space Grotesk', ui-monospace, 'SF Mono', system-ui, sans-serif;
+    --sans:'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:var(--bg); color:var(--ink); font-family:var(--sans);
+    -webkit-font-smoothing:antialiased; line-height:1.45;
+    padding:max(16px,env(safe-area-inset-top)) 16px calc(28px + env(safe-area-inset-bottom));
+  }
+  .wrap{max-width:460px; margin:0 auto}
+
+  header{display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:18px}
+  h1{font-family:var(--num); font-weight:700; font-size:20px; letter-spacing:.3px; margin:0}
+  h1 span{color:var(--faint); font-weight:400}
+  .status{display:flex; align-items:center; gap:7px; font-size:12.5px; color:var(--mut)}
+  .dot{width:9px; height:9px; border-radius:50%; background:var(--faint); box-shadow:0 0 0 3px rgba(255,255,255,.03)}
+  .dot.on{background:var(--go); box-shadow:0 0 10px var(--go)}
+  .dot.off{background:var(--warn)}
+
+  .gauge-card{display:flex; flex-direction:column; align-items:center; gap:14px; margin-bottom:18px}
+  .gauge{
+    position:relative; width:min(74vw,300px); aspect-ratio:1; border-radius:50%;
+    background:radial-gradient(circle at 50% 42%, #1b2530, #12181f 70%, #0d1218);
+    border:1px solid var(--line);
+    box-shadow:inset 0 2px 30px rgba(0,0,0,.5), 0 12px 30px rgba(0,0,0,.35);
+  }
+  .gauge .cross{position:absolute; background:var(--line)}
+  .gauge .cross.h{left:8%; right:8%; top:50%; height:1px}
+  .gauge .cross.v{top:8%; bottom:8%; left:50%; width:1px}
+  .gauge .tol{position:absolute; left:50%; top:50%; width:26%; aspect-ratio:1; transform:translate(-50%,-50%); border-radius:50%; border:1.5px dashed rgba(95,208,138,.55)}
+  .gauge .ball{position:absolute; left:50%; top:50%; width:15%; aspect-ratio:1; border-radius:50%; transform:translate(-50%,-50%);
+    background:radial-gradient(circle at 35% 30%, #ffd79a, var(--warn));
+    box-shadow:0 0 16px rgba(240,166,75,.6), inset 0 -3px 6px rgba(0,0,0,.25); transition:background .25s}
+  .gauge.level .ball{background:radial-gradient(circle at 35% 30%, #c7f6da, var(--go)); box-shadow:0 0 18px rgba(95,208,138,.6), inset 0 -3px 6px rgba(0,0,0,.25)}
+  .tick{position:absolute; font-family:var(--num); font-size:11px; color:var(--faint); letter-spacing:.5px}
+  .tick.t{top:6px; left:50%; transform:translateX(-50%)} .tick.b{bottom:6px; left:50%; transform:translateX(-50%)}
+  .tick.l{left:8px; top:50%; transform:translateY(-50%)} .tick.r{right:8px; top:50%; transform:translateY(-50%)}
+
+  .readouts{display:flex; gap:10px; width:100%}
+  .ro{flex:1; background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:10px 12px}
+  .ro .k{font-size:11.5px; color:var(--mut)}
+  .ro .v{font-family:var(--num); font-weight:700; font-size:26px; font-variant-numeric:tabular-nums; letter-spacing:.5px}
+  .ro .v small{font-size:14px; color:var(--faint); font-weight:500}
+
+  .actions{display:flex; gap:10px; margin-bottom:22px}
+  button{font-family:var(--sans); font-size:14.5px; font-weight:600; cursor:pointer; border-radius:11px; padding:13px 14px; border:1px solid var(--line); background:var(--panel2); color:var(--ink); transition:filter .15s, background .15s}
+  button:hover{filter:brightness(1.12)} button:active{transform:translateY(1px)}
+  button:focus-visible{outline:2px solid var(--go); outline-offset:2px}
+  .btn-go{flex:1; background:var(--go); color:#08130c; border-color:transparent}
+  .btn-ghost{flex:1}
+  .btn-sm{padding:9px 11px; font-size:13px; font-weight:500}
+
+  section{background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:16px; margin-bottom:16px}
+  .sec-title{font-family:var(--num); font-size:13px; font-weight:500; color:var(--mut); margin:0 0 13px}
+
+  .fields{display:flex; gap:12px}
+  .fields + .fields{margin-top:12px}
+  .field{flex:1}
+  .field.half{flex:0 0 calc(50% - 6px)}
+  label{display:block; font-size:12.5px; color:var(--mut); margin-bottom:6px}
+  .inp{display:flex; align-items:center; background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:0 12px}
+  .inp:focus-within{border-color:var(--go)}
+  .inp input{width:100%; background:none; border:0; color:var(--ink); font-family:var(--num); font-size:19px; font-weight:500; padding:11px 0; outline:none; font-variant-numeric:tabular-nums}
+  .inp .u{color:var(--faint); font-size:13px; margin-left:6px}
+  .saved{font-size:11.5px; color:var(--go); margin-top:8px; opacity:0; transition:opacity .3s}
+  .saved.show{opacity:1}
+
+  .seg{display:flex; background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:3px; margin-bottom:14px}
+  .seg button{flex:1; border:0; background:none; color:var(--mut); padding:8px; border-radius:7px; font-size:13.5px}
+  .seg button.sel{background:var(--panel2); color:var(--ink)}
+  .toggles{display:flex; gap:8px; margin-top:12px}
+  .toggles button{flex:1; font-size:12.5px; color:var(--mut); padding:9px}
+  .toggles button.on{border-color:var(--warn); color:var(--warn)}
+
+  .result{display:flex; gap:16px; align-items:center}
+  .van{flex:0 0 118px}
+  .rtext{flex:1; min-width:0}
+  .verdict{font-family:var(--num); font-weight:700; font-size:19px; margin:0 0 4px; line-height:1.2}
+  .verdict.ok{color:var(--go)} .verdict.act{color:var(--warn)} .verdict.bad{color:var(--bad)}
+  .big-h{font-family:var(--num); font-weight:700; font-size:40px; line-height:1; letter-spacing:.5px; color:var(--warn); font-variant-numeric:tabular-nums; margin:8px 0 2px}
+  .big-h.bad{color:var(--bad)}
+  .big-h small{font-size:16px; color:var(--faint); font-weight:500}
+  .sub{font-size:13px; color:var(--mut); margin:2px 0}
+  .sub b{color:var(--ink); font-weight:600}
+  .resid{margin-top:10px; padding-top:10px; border-top:1px solid var(--line); font-size:12.5px; color:var(--mut)}
+  .alt{margin-top:6px; font-size:12.5px; color:var(--faint)}
+
+  svg .body{fill:#131a22; stroke:var(--line); stroke-width:2}
+  svg .wheel{fill:#232e3a} svg .wheel.hot{fill:var(--warn)} svg .wheel.hotbad{fill:var(--bad)}
+  svg .nose{fill:var(--faint)} svg text{fill:var(--faint); font-family:var(--num); font-size:11px}
+
+  details{margin-top:4px}
+  details summary{cursor:pointer; color:var(--mut); font-size:13px; list-style:none; padding:6px 0}
+  details summary::-webkit-details-marker{display:none}
+  details summary::before{content:'+ '; color:var(--faint)}
+  details[open] summary::before{content:'– '}
+  .note{font-size:13px; color:var(--mut); line-height:1.55}
+  .note p{margin:8px 0} .note b{color:var(--ink)}
+  .warnbox{display:none; margin-top:12px; border-radius:10px; padding:10px 12px; font-size:12.5px}
+  .warnbox.show{display:block}
+  .warnbox.amber{background:var(--warn-dim); border:1px solid var(--warn); color:#ffe4bd}
+  .warnbox.red{background:var(--bad-dim); border:1px solid var(--bad); color:#ffd7cf}
+  @media (prefers-reduced-motion: reduce){ *{transition:none!important} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>Niveleur <span>van</span></h1>
+    <div class="status"><span id="dot" class="dot"></span><span id="statusTxt">capteurs en veille</span></div>
+  </header>
+
+  <div class="gauge-card">
+    <div id="gauge" class="gauge">
+      <div class="cross h"></div><div class="cross v"></div>
+      <div class="tol"></div><div id="ball" class="ball"></div>
+      <span class="tick t">av</span><span class="tick b">ar</span>
+      <span class="tick l">g</span><span class="tick r">d</span>
+    </div>
+    <div class="readouts">
+      <div class="ro"><div class="k">Roulis (gauche-droite)</div><div class="v"><span id="roRoll">0,0</span><small>°</small></div></div>
+      <div class="ro"><div class="k">Tangage (avant-arrière)</div><div class="v"><span id="roPitch">0,0</span><small>°</small></div></div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button id="enableBtn" class="btn-go">Activer les capteurs</button>
+    <button id="measureBtn" class="btn-ghost">Mesurer 2 s</button>
+  </div>
+
+  <section>
+    <p class="sec-title">Dimensions du van</p>
+    <div class="fields">
+      <div class="field">
+        <label for="wb">Empattement (entre essieux)</label>
+        <div class="inp"><input id="wb" type="number" inputmode="decimal" value="360"><span class="u">cm</span></div>
+      </div>
+      <div class="field">
+        <label for="tr">Voie (largeur entre roues)</label>
+        <div class="inp"><input id="tr" type="number" inputmode="decimal" value="175"><span class="u">cm</span></div>
+      </div>
+    </div>
+    <div class="fields">
+      <div class="field half">
+        <label for="mh">Hauteur de cale max</label>
+        <div class="inp"><input id="mh" type="number" inputmode="decimal" value="10" step="0.5"><span class="u">cm</span></div>
+      </div>
+    </div>
+    <p id="saved" class="saved">Dimensions mémorisées.</p>
+  </section>
+
+  <section>
+    <p class="sec-title">Source de la mesure</p>
+    <div class="seg">
+      <button id="modeSensor" class="sel">Capteur</button>
+      <button id="modeManual">Manuel</button>
+    </div>
+    <div id="manualFields" style="display:none">
+      <div class="fields">
+        <div class="field">
+          <label for="mRoll">Roulis (+ = penche à droite)</label>
+          <div class="inp"><input id="mRoll" type="number" inputmode="decimal" value="0" step="0.1"><span class="u">°</span></div>
+        </div>
+        <div class="field">
+          <label for="mPitch">Tangage (+ = avant bas)</label>
+          <div class="inp"><input id="mPitch" type="number" inputmode="decimal" value="0" step="0.1"><span class="u">°</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="toggles" id="flipRow">
+      <button id="flipLR" class="btn-sm">Inverser gauche / droite</button>
+      <button id="flipFB" class="btn-sm">Inverser avant / arrière</button>
+    </div>
+    <p class="sub" style="margin-top:10px">Pose le téléphone à plat, écran vers le haut, le <b>haut vers l'avant</b> du van. Si la bille part du mauvais côté, utilise les inversions.</p>
+  </section>
+
+  <section>
+    <p class="sec-title">Où et de combien caler</p>
+    <div class="result">
+      <div class="van">
+        <svg viewBox="0 0 120 175" width="100%" aria-hidden="true">
+          <rect class="body" x="20" y="10" width="80" height="155" rx="16"/>
+          <polygon class="nose" points="52,10 68,10 60,2"/>
+          <rect id="w-fl" class="wheel" x="8"  y="26"  width="16" height="30" rx="5"/>
+          <rect id="w-fr" class="wheel" x="96" y="26"  width="16" height="30" rx="5"/>
+          <rect id="w-rl" class="wheel" x="8"  y="119" width="16" height="30" rx="5"/>
+          <rect id="w-rr" class="wheel" x="96" y="119" width="16" height="30" rx="5"/>
+          <text x="60" y="92" text-anchor="middle">AV ↑</text>
+        </svg>
+      </div>
+      <div class="rtext">
+        <p id="verdict" class="verdict act">Réglez vos dimensions</p>
+        <div id="actionBlock">
+          <div id="bigH" class="big-h"><span id="hVal">0,0</span><small> cm</small></div>
+          <p class="sub" id="hSub">≈ 0 mm</p>
+          <p class="sub" id="whereTxt">—</p>
+        </div>
+        <div class="resid" id="residTxt"></div>
+        <div class="alt" id="altTxt"></div>
+      </div>
+    </div>
+    <div id="warnbox" class="warnbox"></div>
+  </section>
+
+  <section>
+    <details>
+      <summary>Comment ça marche et limites</summary>
+      <div class="note">
+        <p><b>Le calcul.</b> Hauteur de cale = distance entre roues × tangente de l'angle. Roulis → voie × tan(roulis). Tangage → empattement × tan(tangage). On surélève les 2 roues du côté (ou de l'extrémité) le plus bas, à la même hauteur.</p>
+        <p><b>2 cales = 1 axe à plat.</b> Géométriquement, 2 cales mettent parfaitement à plat l'axe le plus incliné. La suspension et l'écrasement des pneus absorbent une petite part du reste (fraction de degré), pas plusieurs degrés : la pente résiduelle affichée reste globalement ressentie. Pour zéro résiduel sur les deux axes, il faudrait une 3ᵉ cale.</p>
+        <p><b>Hauteur max.</b> Si la cale nécessaire dépasse la limite réglée, l'app le dit : cherche un sol plus plat ou augmente la limite si tu as des cales plus hautes.</p>
+        <p><b>Précision.</b> Capteurs du téléphone ≈ ±1°. Pose l'appareil bien à plat et lance « Mesurer 2 s ». Le signe varie selon les modèles : fie-toi à la bille et corrige avec les inversions.</p>
+        <p><b>Sécurité.</b> Frein à main serré, cales centrées sous les pneus, montée lente, puis re-vérifie avant de te garer.</p>
+      </div>
+    </details>
+  </section>
+
+</div>
+
+<script>
+(function(){
+  const $=id=>document.getElementById(id);
+  const TOL=0.4, MAXA=6, D2R=Math.PI/180;
+
+  /* ---- persistance ---- */
+  const KEY='niveleur-van';
+  function load(){ try{return JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){return{}} }
+  function persist(){
+    try{ localStorage.setItem(KEY, JSON.stringify({
+      wb:$('wb').value, tr:$('tr').value, mh:$('mh').value
+    })); }catch(e){}
+  }
+  (function restore(){
+    const s=load();
+    if(s.wb!=null) $('wb').value=s.wb;
+    if(s.tr!=null) $('tr').value=s.tr;
+    if(s.mh!=null) $('mh').value=s.mh;
+  })();
+  let savedTimer=null;
+  function flashSaved(){ const el=$('saved'); el.classList.add('show'); clearTimeout(savedTimer); savedTimer=setTimeout(()=>el.classList.remove('show'),1400); }
+
+  let mode='sensor', listening=false, held=false;
+  let liveRoll=0, livePitch=0, emaR=0, emaP=0, seeded=false;
+  let flipLR=false, flipFB=false, measuring=false, samples=[];
+
+  function setStatus(t,c){ $('statusTxt').textContent=t; $('dot').className='dot'+(c?' '+c:''); }
+
+  function onOrient(e){
+    if(e.beta==null||e.gamma==null) return;
+    if(!seeded){emaR=e.gamma; emaP=e.beta; seeded=true;}
+    emaR=emaR*0.82+e.gamma*0.18; emaP=emaP*0.82+e.beta*0.18;
+    if(measuring) samples.push([emaR,emaP]);
+    if(!held){ liveRoll=emaR; livePitch=emaP; requestRender(); }
+  }
+  async function enableSensors(){
+    try{
+      if(typeof DeviceOrientationEvent!=='undefined' && typeof DeviceOrientationEvent.requestPermission==='function'){
+        const p=await DeviceOrientationEvent.requestPermission();
+        if(p!=='granted'){ setStatus('autorisation refusée','off'); return; }
+      }
+    }catch(err){ setStatus('capteurs indisponibles','off'); }
+    if('DeviceOrientationEvent' in window){
+      window.addEventListener('deviceorientation', onOrient);
+      listening=true; held=false;
+      setStatus('capteurs actifs','on'); $('enableBtn').textContent='Reprendre le direct';
+    }else{ setStatus('pas de capteur — mode manuel','off'); switchMode('manual'); }
+  }
+  function measure(){
+    if(mode==='manual'){ requestRender(); return; }
+    if(!listening){ enableSensors().then(()=>startMeasure()); return; }
+    startMeasure();
+  }
+  function startMeasure(){
+    samples=[]; measuring=true; held=false; $('measureBtn').textContent='Mesure…';
+    setTimeout(()=>{
+      measuring=false; $('measureBtn').textContent='Mesurer 2 s';
+      if(samples.length){
+        let sr=0,sp=0; samples.forEach(s=>{sr+=s[0];sp+=s[1]});
+        liveRoll=sr/samples.length; livePitch=sp/samples.length; held=true;
+        setStatus('mesure figée','on'); requestRender();
+      }
+    },2000);
+  }
+
+  function activeAngles(){
+    if(mode==='manual') return {roll:parseFloat($('mRoll').value)||0, pitch:parseFloat($('mPitch').value)||0};
+    return {roll:liveRoll, pitch:livePitch};
+  }
+
+  function compute(){
+    const L=Math.max(1,parseFloat($('wb').value)||0);
+    const W=Math.max(1,parseFloat($('tr').value)||0);
+    const maxH=Math.max(0.1,parseFloat($('mh').value)||0);
+    const {roll,pitch}=activeAngles();
+    const rA=Math.abs(roll), pA=Math.abs(pitch);
+    let lowSide=(roll>=0)?'droite':'gauche'; if(flipLR) lowSide=(lowSide==='droite')?'gauche':'droite';
+    let lowEnd =(pitch>=0)?'avant':'arrière'; if(flipFB) lowEnd=(lowEnd==='avant')?'arrière':'avant';
+    const level=rA<TOL && pA<TOL;
+
+    // Une paire de cales met à plat un seul axe. On évalue chaque axe, en
+    // plafonnant la cale à maxH (correction partielle si besoin), et on garde
+    // celui qui laisse la plus petite inclinaison restante.
+    function cand(axis){
+      const angle=(axis==='roll')?rA:pA;
+      const dist =(axis==='roll')?W:L;
+      const other=(axis==='roll')?pA:rA;
+      const need=dist*Math.tan(angle*D2R);            // cm pour mettre cet axe à plat
+      const applied=Math.min(need,maxH);              // limité par la hauteur max
+      const residThis=Math.atan(Math.max(0,need-applied)/dist)/D2R;
+      return {axis, angle, dist, need, applied, residThis, residOther:other,
+              worst:Math.max(residThis,other), full:applied>=need-1e-9};
+    }
+    const cR=cand('roll'), cP=cand('pitch');
+    const best=(cR.worst<cP.worst)?cR:(cP.worst<cR.worst?cP:(rA>=pA?cR:cP));
+    const alt=(best.axis==='roll')?cP:cR;
+    return {L,W,maxH,rA,pA,lowSide,lowEnd,level,best,alt};
+  }
+
+  let pending=false;
+  function requestRender(){ if(!pending){pending=true; requestAnimationFrame(()=>{pending=false; render();});} }
+  const f1=x=>x.toFixed(1).replace('.',',');
+  const cm=x=>x.toFixed(1).replace('.',',');
+
+  function render(){
+    const c=compute();
+    $('roRoll').textContent=f1(c.rA); $('roPitch').textContent=f1(c.pA);
+    const mx=Math.min(c.rA/MAXA,1), my=Math.min(c.pA/MAXA,1);
+    const bx=(c.lowSide==='droite'? mx:-mx)*42, by=(c.lowEnd==='avant'? -my:my)*42;
+    $('ball').style.transform=`translate(calc(-50% + ${bx}%), calc(-50% + ${by}%))`;
+    $('gauge').classList.toggle('level', c.level);
+
+    ['w-fl','w-fr','w-rl','w-rr'].forEach(id=>{$(id).classList.remove('hot','hotbad');});
+    const verdict=$('verdict'), block=$('actionBlock'), warn=$('warnbox'), bigH=$('bigH');
+    warn.className='warnbox'; bigH.classList.remove('bad');
+
+    if(c.level){
+      verdict.textContent='Van de niveau'; verdict.className='verdict ok';
+      block.style.display='none'; $('residTxt').textContent=''; $('altTxt').textContent=''; return;
+    }
+    block.style.display='block';
+
+    const b=c.best;
+    const strong=b.worst>=1.5;   // encore nettement incliné après la meilleure action
+
+    let where, hot, axisName;
+    if(b.axis==='roll'){
+      axisName='roulis';
+      where='2 cales identiques <b>côté '+c.lowSide+'</b> (avant + arrière).';
+      hot=(c.lowSide==='droite')?['w-fr','w-rr']:['w-fl','w-rl'];
+    }else{
+      axisName='tangage';
+      where='2 cales identiques <b>à l\u2019'+(c.lowEnd==='avant'?'avant':'arrière')+'</b> (gauche + droite).';
+      hot=(c.lowEnd==='avant')?['w-fl','w-fr']:['w-rl','w-rr'];
+    }
+
+    if(strong){ verdict.textContent='Reste incliné'; verdict.className='verdict bad'; bigH.classList.add('bad'); }
+    else if(!b.full){ verdict.textContent='À caler (partiel)'; verdict.className='verdict act'; }
+    else { verdict.textContent='À caler'; verdict.className='verdict act'; }
+
+    $('hVal').textContent=cm(b.applied);
+    $('hSub').textContent='≈ '+Math.round(b.applied*10)+' mm par cale';
+    $('whereTxt').innerHTML=where;
+    hot.forEach(id=>$(id).classList.add(strong?'hotbad':'hot'));
+
+    let resid='';
+    if(!b.full){
+      resid=axisName.charAt(0).toUpperCase()+axisName.slice(1)+' réduit de '+f1(b.angle)+'° à '+f1(b.residThis)+'° (cale plafonnée à '+cm(c.maxH)+' cm).';
+    }
+    if(b.residOther>=TOL){
+      resid+=(resid?' ':'')+'Résiduel '+(b.axis==='roll'?'avant-arrière':'gauche-droite')+' : '+f1(b.residOther)+'° (en partie absorbé par la suspension, non corrigeable à 2 cales).';
+    }else if(b.full){
+      resid='Autre axe déjà de niveau.';
+    }
+    $('residTxt').textContent=resid;
+
+    const a=c.alt; let alt='';
+    if(a.angle>=TOL){
+      const loc=a.axis==='roll'?('côté '+c.lowSide):('à l\u2019'+(c.lowEnd==='avant'?'avant':'arrière'));
+      alt='Autre option : caler '+loc+' ('+cm(a.applied)+' cm'+(a.full?'':' max')+') → laisserait '+f1(a.residOther)+'° sur l\u2019autre axe'+(a.full?'':', '+f1(a.residThis)+'° sur celui-ci')+'.';
+    }
+    $('altTxt').textContent=alt;
+
+    if(strong){
+      warn.className='warnbox red show';
+      warn.textContent='Il restera ~'+f1(b.worst)+'° d\u2019inclinaison : 2 cales (limite '+cm(c.maxH)+' cm) ne suffisent pas à mettre à plat ici. Cherche un sol plus plat, des cales plus hautes, ou ajoute une 3ᵉ cale.';
+    }else if(!b.full){
+      warn.className='warnbox amber show';
+      warn.textContent='Cale plafonnée à '+cm(c.maxH)+' cm : l\u2019axe n\u2019est pas parfaitement à plat, mais fortement réduit.';
+    }
+  }
+
+  function switchMode(m){
+    mode=m; held=false;
+    $('modeSensor').classList.toggle('sel',m==='sensor');
+    $('modeManual').classList.toggle('sel',m==='manual');
+    $('manualFields').style.display=(m==='manual')?'block':'none';
+    $('flipRow').style.display=(m==='manual')?'none':'flex';
+    requestRender();
+  }
+
+  $('enableBtn').addEventListener('click',()=>{held=false; enableSensors();});
+  $('measureBtn').addEventListener('click',measure);
+  $('modeSensor').addEventListener('click',()=>switchMode('sensor'));
+  $('modeManual').addEventListener('click',()=>switchMode('manual'));
+  $('flipLR').addEventListener('click',()=>{flipLR=!flipLR; $('flipLR').classList.toggle('on',flipLR); requestRender();});
+  $('flipFB').addEventListener('click',()=>{flipFB=!flipFB; $('flipFB').classList.toggle('on',flipFB); requestRender();});
+  ['wb','tr','mh'].forEach(id=>$(id).addEventListener('input',()=>{persist(); flashSaved(); requestRender();}));
+  ['mRoll','mPitch'].forEach(id=>$(id).addEventListener('input',requestRender));
+
+  render();
+
+  if('serviceWorker' in navigator){
+    window.addEventListener('load',()=>{ navigator.serviceWorker.register('sw.js').catch(()=>{}); });
+  }
+})();
+</script>
+</body>
+</html>
