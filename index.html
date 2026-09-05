@@ -129,6 +129,7 @@
       <circle id="ball" cx="160" cy="250" r="22" fill="url(#gAmber)"/>
     </svg>
     <p id="status" class="status-line">Active les capteurs pour mesurer.</p>
+    <p id="stagger" class="status-line" style="min-height:0;font-size:12px;color:var(--faint);margin-top:2px"></p>
   </div>
 
   <div class="dock">
@@ -155,6 +156,7 @@
       </div>
       <div class="fields">
         <div class="field half"><label for="mh">Hauteur de cale max</label><div class="inp"><input id="mh" type="number" inputmode="decimal" value="10" step="0.5"><span class="u">cm</span></div></div>
+        <div class="field half"><label for="kadv">Cale ronde : avance / cm</label><div class="inp"><input id="kadv" type="number" inputmode="decimal" value="3.5" step="0.1"><span class="u">cm</span></div></div>
       </div>
       <p id="saved" class="saved">Enregistré.</p>
     </section>
@@ -187,6 +189,7 @@
           <p><b>Sol incliné 2 sens : calage sur 3 points.</b> On prend appui sur 3 roues : la plus haute sert de référence (rien), deux roues d'une même paire réelle (un côté ou un essieu) sont calées — à deux hauteurs — pour rejoindre son niveau, et la 4ᵉ roue est ignorée (grise barrée), au sol via la suspension. Les deux axes passent à plat. La roue la plus basse peut demander une cale élevée (jusqu'à voie×tan + empattement×tan) ; au-delà du maximum réglé elle est plafonnée et la pente restante est affichée. Si un seul axe est incliné, l'app pose 2 cales égales et garde les 4 roues au sol.</p>
           <p><b>Limite de hauteur.</b> Si la cale dépasse le maximum réglé, l'app le plafonne, réduit au mieux et affiche l'inclinaison restante.</p>
           <p><b>Précision.</b> Capteurs ≈ ±1°. Pose le téléphone bien à plat, haut vers l'avant. Le signe varie selon les modèles : fie-toi à la bille, corrige avec les inversions.</p>
+          <p><b>Cales rondes : décalage.</b> Avec des cales arrondies (hauteur en continu), les deux roues montent ensemble et tu ne t'arrêtes qu'une fois : pour obtenir deux hauteurs différentes, décale les deux cales dans le sens de la marche de la valeur affichée (la plus haute est engagée en premier). Monte lentement et arrête-toi dès que l'app indique « de niveau ». Le décalage dépend du profil de la cale : règle « avance / cm » (cm d'avancée pour 1 cm de montée) — pour l'affiner, mesure une fois l'avancée pour 5 cm de montée et divise par 5.</p>
           <p><b>Sécurité.</b> Frein à main, cales centrées, montée lente, re-vérifie avant de te garer.</p>
         </div>
       </details>
@@ -203,7 +206,7 @@
   const KEY='niveleur-van';
   function load(){try{return JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){return{}}}
   function persist(){try{localStorage.setItem(KEY,JSON.stringify({
-    wb:$('wb').value,tr:$('tr').value,mh:$('mh').value,
+    wb:$('wb').value,tr:$('tr').value,mh:$('mh').value,kadv:$('kadv').value,
     mode,flipLR,flipFB,mRoll:$('mRoll').value,mPitch:$('mPitch').value
   }))}catch(e){}}
 
@@ -214,6 +217,7 @@
   (function restore(){
     const s=load();
     if(s.wb!=null)$('wb').value=s.wb; if(s.tr!=null)$('tr').value=s.tr; if(s.mh!=null)$('mh').value=s.mh;
+    if(s.kadv!=null)$('kadv').value=s.kadv;
     if(s.mRoll!=null)$('mRoll').value=s.mRoll; if(s.mPitch!=null)$('mPitch').value=s.mPitch;
     flipLR=!!s.flipLR; flipFB=!!s.flipFB;
     $('flipLR').classList.toggle('on',flipLR); $('flipFB').classList.toggle('on',flipFB);
@@ -298,7 +302,7 @@
     const cap=(need,dist)=>{const applied=Math.min(need,maxH);return{applied,resid:Math.atan(Math.max(0,need-applied)/dist)/D2R,capped:need>maxH+1e-9};};
     const pos=(s,e)=>({x:(e==='avant'?L/2:-L/2),y:(s==='droite'?W/2:-W/2)});
     const znat=(s,e)=>((s===highSide?R/2:-R/2)+(e===highEnd?P/2:-P/2));
-    let chocks=[],refs=[],ignored=null,mode2='level',worst=0,anyCapped=false;
+    let chocks=[],refs=[],ignored=null,mode2='level',worst=0,anyCapped=false,stagger=0,staggerHigh=0;
     if(!level){
       if(pA<TOL){                                 // roulis seul : paire côté bas (égales)
         const c=cap(R,W); mode2='side'; worst=c.resid; anyCapped=c.capped;
@@ -321,9 +325,13 @@
         worst=planeResid(p1,p2,p3).worst; anyCapped=a.capped||b.capped;
         chocks=[{wheel:wid(a.s,a.e),height:a.applied},{wheel:wid(b.s,b.e),height:b.applied}];
         refs=[wid(highSide,highEnd)];
+        // décalage des 2 cales rondes dans le sens de la marche (les 2 roues montent ensemble)
+        const kadv=Math.max(0.1,parseFloat($('kadv').value)||3.5);
+        staggerHigh=Math.max(a.applied,b.applied);
+        stagger=kadv*(staggerHigh-Math.min(a.applied,b.applied));
       }
     }
-    return{L,W,maxH,rA,pA,lowSide,lowEnd,level,mode2,chocks,refs,ignored,worst,anyCapped};
+    return{L,W,maxH,rA,pA,lowSide,lowEnd,level,mode2,chocks,refs,ignored,worst,anyCapped,stagger,staggerHigh};
   }
 
   let pending=false;
@@ -349,6 +357,7 @@
     const c=compute();
     $('liveRoll').textContent=f1(c.rA); $('livePitch').textContent=f1(c.pA);
     clearWheels();
+    $('stagger').textContent='';
     const body=$('body'),center=$('centerTxt');
     body.classList.remove('ok'); center.style.display='none';
 
@@ -375,6 +384,9 @@
     c.chocks.forEach(ch=>{ $(ch.wheel).classList.add(strong?'hotbad':'hot'); label(ch.wheel,'role-chock',f1(ch.height),'cm'); });
     (c.refs||[]).forEach(id=>{ $(id).classList.add('fixe'); label(id,'role-fixe', c.mode2==='tripod'?'réf':'fixe'); });
     if(c.ignored){ $(c.ignored).classList.add('ignored'); const x=$('x'+c.ignored.slice(1)); if(x)x.style.display=''; }
+    if(c.mode2==='tripod' && c.stagger>0.2){
+      $('stagger').textContent='Décalage cales ≈ '+f1(c.stagger)+' cm (sens de la marche) · engage d\u2019abord la cale '+f1(c.staggerHigh)+' cm';
+    }
 
     if(c.worst<TOL && !c.anyCapped){
       setStatus('À plat une fois calé'+(c.mode2==='tripod'?' · 1 roue ignorée (pend)':''),'ok');
@@ -404,7 +416,7 @@
   $('modeManual').addEventListener('click',()=>switchMode('manual'));
   $('flipLR').addEventListener('click',()=>{flipLR=!flipLR;$('flipLR').classList.toggle('on',flipLR);persist();requestRender();});
   $('flipFB').addEventListener('click',()=>{flipFB=!flipFB;$('flipFB').classList.toggle('on',flipFB);persist();requestRender();});
-  ['wb','tr','mh'].forEach(id=>$(id).addEventListener('input',()=>{persist();flashSaved();requestRender();}));
+  ['wb','tr','mh','kadv'].forEach(id=>$(id).addEventListener('input',()=>{persist();flashSaved();requestRender();}));
   ['mRoll','mPitch'].forEach(id=>$(id).addEventListener('input',()=>{persist();requestRender();}));
 
   render();
