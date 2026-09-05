@@ -22,8 +22,8 @@
   *{box-sizing:border-box}
   html,body{margin:0;height:100%}
   body{background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;overscroll-behavior:none}
-  .app{display:flex;flex-direction:column;min-height:100dvh;
-    padding:max(10px,env(safe-area-inset-top)) 14px calc(14px + env(safe-area-inset-bottom))}
+  .app{display:flex;flex-direction:column;height:100dvh;overflow:hidden;
+    padding:max(8px,env(safe-area-inset-top)) 14px calc(10px + env(safe-area-inset-bottom))}
 
   header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:4px 2px 2px}
   .brand{font-family:var(--num);font-weight:700;font-size:16px;letter-spacing:.4px}
@@ -33,8 +33,9 @@
   .iconbtn:active{transform:translateY(1px)}
   .iconbtn svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7}
 
-  .stage{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;min-height:0}
-  #van{width:min(86vw,400px);height:auto;max-height:64vh;touch-action:manipulation}
+  .stage{flex:1;display:flex;flex-direction:column;align-items:center;min-height:0;gap:4px;overflow:hidden}
+  .vanwrap{flex:1 1 0;min-height:0;width:100%;display:flex;align-items:center;justify-content:center}
+  #van{max-width:min(88vw,400px);max-height:100%;width:auto;height:auto;touch-action:manipulation}
   .status-line{margin:0;font-size:13.5px;text-align:center;min-height:19px;color:var(--mut)}
   .status-line.ok{color:var(--go)} .status-line.warn{color:var(--warn)} .status-line.bad{color:var(--bad)}
 
@@ -102,6 +103,7 @@
   </header>
 
   <div class="stage">
+    <div class="vanwrap">
     <svg id="van" viewBox="0 0 320 500" role="img" aria-label="Vue de dessus du van avec niveau à bulle">
       <defs>
         <radialGradient id="gAmber" cx="35%" cy="30%"><stop offset="0" stop-color="#ffd79a"/><stop offset="1" stop-color="#F0A64B"/></radialGradient>
@@ -128,6 +130,7 @@
       <text class="grid" x="160" y="74" text-anchor="middle" style="font-size:11px;fill:#3a4650;font-family:var(--num)">AV</text>
       <circle id="ball" cx="160" cy="250" r="22" fill="url(#gAmber)"/>
     </svg>
+    </div>
     <p id="status" class="status-line">Active les capteurs pour mesurer.</p>
     <p id="stagger" class="status-line" style="min-height:0;font-size:12px;color:var(--faint);margin-top:2px"></p>
   </div>
@@ -254,7 +257,11 @@
     setTimeout(()=>{
       measuring=false;
       if(samples.length){let sr=0,sp=0;samples.forEach(s=>{sr+=s[0];sp+=s[1]});liveRoll=sr/samples.length;livePitch=sp/samples.length;held=true;}
-      updateBtn();requestRender();
+      requestRender();
+      if(held){
+        $('primaryBtn').textContent='Figé 2 s…';
+        setTimeout(()=>{ held=false; updateBtn(); requestRender(); },2000);   // dégèle et revient au direct
+      }else{ updateBtn(); }
     },2000);
   }
   function primaryAction(){
