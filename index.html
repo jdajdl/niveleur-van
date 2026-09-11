@@ -1,17 +1,47 @@
 <!DOCTYPE html>
+<!-- ===================================================================================
+     NIVELEUR VAN — application PWA de mise à niveau d'un van avec des cales
+     -----------------------------------------------------------------------------------
+     PRINCIPE : on pose le téléphone à plat sur le sol du van. Les capteurs donnent
+     deux angles : le ROULIS (penché gauche/droite) et le TANGAGE (penché avant/arrière).
+     À partir de l'empattement et de la voie du van, l'app calcule où placer les cales
+     et de quelle hauteur, puis l'affiche sur un dessin du van vu de dessus.
+
+     ARCHITECTURE DU FICHIER (tout est dans ce seul fichier) :
+       1. <head>   : méta PWA (installable, plein écran, thème sombre)
+       2. <style>  : tout le CSS (variables de couleur, mise en page, dessin du van)
+       3. <body>   : l'écran principal (le van = niveau à bulle) + la feuille "Paramètres"
+       4. <script> : toute la logique (capteurs, calcul physique, affichage)
+
+     FICHIERS VOISINS (nécessaires à la PWA, non modifiés ici) :
+       manifest.webmanifest (infos d'installation), sw.js (cache hors-ligne), icônes PNG.
+     ==================================================================================== -->
 <html lang="fr">
 <head>
 <meta charset="utf-8">
+<!-- viewport-fit=cover : l'app occupe tout l'écran, y compris derrière l'encoche -->
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- couleur de la barre système (thème sombre) -->
 <meta name="theme-color" content="#0E1319">
 <title>Niveleur van</title>
+<!-- Manifest PWA : rend l'app installable ("Ajouter à l'écran d'accueil") -->
 <link rel="manifest" href="manifest.webmanifest">
+<!-- Ces méta permettent le mode "application plein écran" une fois installée -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Niveleur">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <style>
+  /* ---------------------------------------------------------------------------
+     VARIABLES DE COULEUR ET DE POLICE
+     On centralise toutes les couleurs ici : changer une valeur la change partout.
+     --bg    = fond général (bleu-nuit)      --panel/--panel2 = panneaux
+     --ink   = texte principal               --mut/--faint    = textes atténués
+     --go    = vert "OK / de niveau"         --warn = orange "à caler"
+     --bad   = rouge "reste incliné"
+     --num   = police pour les chiffres      --sans = police du texte courant
+     --------------------------------------------------------------------------- */
   :root{
     --bg:#0E1319; --panel:#161D26; --panel2:#1E2732; --line:#2A3542;
     --ink:#EAF0F6; --mut:#8A97A5; --faint:#5A6673;
@@ -19,56 +49,79 @@
     --num:ui-monospace,'SF Mono','Segoe UI',system-ui,sans-serif;
     --sans:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
   }
-  *{box-sizing:border-box}
-  html,body{margin:0;height:100%}
+  *{box-sizing:border-box}                 /* les bordures/paddings sont inclus dans les largeurs */
+  html,body{margin:0;height:100%;overflow:hidden}
   body{background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;overscroll-behavior:none}
-  .app{display:flex;flex-direction:column;height:100dvh;overflow:hidden;
-    padding:max(8px,env(safe-area-inset-top)) 14px calc(10px + env(safe-area-inset-bottom))}
 
-  header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:4px 2px 2px}
-  .brand{font-family:var(--num);font-weight:700;font-size:16px;letter-spacing:.4px}
+  /* .app = conteneur plein écran, en colonne : en-tête / scène / bouton du bas.
+     height:100dvh = hauteur exacte de l'écran ; overflow:hidden = jamais de défilement.
+     Le padding réserve les zones sûres (encoche, barre du bas). */
+  .app{display:flex;flex-direction:column;height:100dvh;overflow:hidden;
+    padding:max(6px,env(safe-area-inset-top)) 14px calc(6px + env(safe-area-inset-bottom))}
+
+  /* EN-TÊTE : titre à gauche, bouton engrenage (Paramètres) à droite */
+  header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:2px 2px 2px}
+  .brand{font-family:var(--num);font-weight:700;font-size:15px;letter-spacing:.4px}
   .brand span{color:var(--faint);font-weight:400}
+  .brand .ver{font-size:11px;letter-spacing:0}   /* numéro de version, discret */
   .iconbtn{width:40px;height:40px;display:grid;place-items:center;border-radius:11px;border:1px solid var(--line);
     background:var(--panel2);color:var(--ink);cursor:pointer}
   .iconbtn:active{transform:translateY(1px)}
   .iconbtn svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7}
 
-  .stage{flex:1;display:flex;flex-direction:column;align-items:center;min-height:0;gap:4px;overflow:hidden}
+  /* SCÈNE : la zone centrale. En colonne = le van (qui grandit), puis 2 lignes de texte.
+     .vanwrap prend toute la place restante (flex:1) et centre le van ; le van se
+     redimensionne pour tenir dans cette place (max-height:100%). C'est ce qui garantit
+     que TOUT tient à l'écran quel que soit le téléphone. */
+  .stage{flex:1;display:flex;flex-direction:column;align-items:center;min-height:0;gap:2px;overflow:hidden}
   .vanwrap{flex:1 1 0;min-height:0;width:100%;display:flex;align-items:center;justify-content:center}
   #van{max-width:min(88vw,400px);max-height:100%;width:auto;height:auto;touch-action:manipulation}
-  .status-line{margin:0;font-size:13.5px;text-align:center;min-height:19px;color:var(--mut)}
+  /* Ligne d'état sous le van ("Van de niveau", "Restera ~1°", etc.) + variantes de couleur */
+  .status-line{margin:0;font-size:13px;text-align:center;min-height:16px;color:var(--mut)}
   .status-line.ok{color:var(--go)} .status-line.warn{color:var(--warn)} .status-line.bad{color:var(--bad)}
 
-  .dock{display:flex;gap:10px;padding-top:6px}
-  button.act{flex:1;font-family:var(--sans);font-size:15px;font-weight:600;cursor:pointer;border-radius:13px;
-    padding:15px;border:1px solid var(--line);background:var(--panel2);color:var(--ink)}
+  /* PIED : le bouton d'action principal (activer capteurs / mesurer / reprendre) */
+  .dock{display:flex;gap:10px;padding-top:4px}
+  button.act{flex:1;font-family:var(--sans);font-size:14.5px;font-weight:600;cursor:pointer;border-radius:13px;
+    padding:12px;border:1px solid var(--line);background:var(--panel2);color:var(--ink)}
   button.act:active{transform:translateY(1px)}
-  button.act.go{background:var(--go);color:#08130c;border-color:transparent}
+  button.act.go{background:var(--go);color:#08130c;border-color:transparent}   /* bouton "vert" mis en avant */
 
+  /* -------- DESSIN DU VAN (éléments SVG) --------
+     Chaque "rôle" de roue a sa couleur, pilotée par une classe ajoutée en JS :
+       .hot      = roue à caler (orange)         .hotbad = idem mais reste incliné (rouge)
+       .fixe     = roue de référence (contour vert, on n'y touche pas)
+       .ignored  = roue ignorée (grise) + croix (.xcross) — elle pend sur la suspension
+       .susp     = ancien style (non utilisé actuellement)
+     .bnum/.bunit = le nombre (hauteur en cm) écrit sur le pneu.
+     .center-txt  = le texte "de niveau" au centre quand tout est bon. */
   svg .body{fill:#131a22;stroke:var(--line);stroke-width:2.5}
-  svg .body.ok{stroke:var(--go)}
-  svg .nose{fill:var(--faint)}
-  svg .grid{stroke:#222c37;stroke-width:1}
-  svg .tol{fill:none;stroke:rgba(95,208,138,.5);stroke-width:1.5;stroke-dasharray:4 4}
-  svg .wheel{fill:#26323f}
+  svg .body.ok{stroke:var(--go)}                 /* contour vert du van quand de niveau */
+  svg .nose{fill:var(--faint)}                   /* petit triangle = avant du van */
+  svg .grid{stroke:#222c37;stroke-width:1}       /* croix de repère au centre */
+  svg .tol{fill:none;stroke:rgba(95,208,138,.5);stroke-width:1.5;stroke-dasharray:4 4}  /* cercle de tolérance */
+  svg .wheel{fill:#26323f}                        /* pneu au repos */
   svg .wheel.hot{fill:var(--warn)} svg .wheel.hotbad{fill:var(--bad)}
   svg .wheel.susp{fill:#1a2028;stroke:var(--faint);stroke-width:1.5;stroke-dasharray:3 3}
   svg .wheel.fixe{fill:#131a22;stroke:var(--go);stroke-width:1.9}
-  svg .role-fixe .bnum{fill:var(--go);font-size:11px}
+  svg .role-fixe .bnum{fill:var(--go);font-size:11px}    /* étiquette "fixe/réf" en vert */
   svg .role-susp .bnum{fill:var(--faint);font-size:11px}
   svg .wheel.ignored{fill:#3a4650;stroke:#5A6673;stroke-width:1.2}
-  svg .xcross line{stroke:#9aa6b3;stroke-width:2.6;stroke-linecap:round}
+  svg .xcross line{stroke:#9aa6b3;stroke-width:2.6;stroke-linecap:round}   /* la croix sur la roue ignorée */
   svg .bnum{fill:#0E1319;font-family:var(--num);font-weight:700;font-size:16px;text-anchor:middle}
   svg .bunit{fill:#0E1319;font-family:var(--num);font-weight:600;font-size:9px;text-anchor:middle;opacity:.8}
+  svg .boff{fill:var(--warn);font-family:var(--num);font-weight:700;font-size:11px;text-anchor:middle}  /* décalage à appliquer à la cale la moins haute (sous le pneu) */
   svg .center-txt{fill:var(--go);font-family:var(--num);font-weight:700;font-size:15px;text-anchor:middle}
 
-  /* settings sheet */
+  /* -------- FEUILLE "PARAMÈTRES" (glisse depuis le bas) --------
+     position:fixed + translateY(100%) = cachée hors écran ; .open la fait monter. */
   .sheet{position:fixed;inset:0;background:var(--bg);z-index:20;display:flex;flex-direction:column;
     transform:translateY(100%);transition:transform .25s ease;padding:max(10px,env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom))}
   .sheet.open{transform:translateY(0)}
   .sheet header{padding-bottom:10px}
   .sheet .title{font-family:var(--num);font-weight:700;font-size:17px}
-  .sheet .scroll{overflow-y:auto;-webkit-overflow-scrolling:touch}
+  .sheet .scroll{overflow-y:auto;-webkit-overflow-scrolling:touch}   /* le contenu des réglages défile */
+  /* Blocs, champs de saisie, sélecteurs et interrupteurs des réglages */
   section{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:15px;margin-bottom:14px;max-width:460px;margin-left:auto;margin-right:auto}
   .sec-title{font-family:var(--num);font-size:12.5px;color:var(--mut);margin:0 0 12px}
   .fields{display:flex;gap:12px}.fields+.fields{margin-top:12px}.field{flex:1}.field.half{flex:0 0 calc(50% - 6px)}
@@ -76,13 +129,13 @@
   .inp{display:flex;align-items:center;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:0 12px}
   .inp:focus-within{border-color:var(--go)}
   .inp input{width:100%;background:none;border:0;color:var(--ink);font-family:var(--num);font-size:18px;font-weight:500;padding:11px 0;outline:none;font-variant-numeric:tabular-nums}
-  .inp .u{color:var(--faint);font-size:13px;margin-left:6px}
+  .inp .u{color:var(--faint);font-size:13px;margin-left:6px}   /* l'unité (cm, °) à droite du champ */
   .seg{display:flex;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:3px;margin-bottom:12px}
   .seg button{flex:1;border:0;background:none;color:var(--mut);padding:9px;border-radius:7px;font-size:13.5px;cursor:pointer}
-  .seg button.sel{background:var(--panel2);color:var(--ink)}
+  .seg button.sel{background:var(--panel2);color:var(--ink)}     /* onglet sélectionné (Capteur/Manuel) */
   .toggles{display:flex;gap:8px;margin-top:4px}
   .toggles button{flex:1;font-size:12.5px;color:var(--mut);padding:10px;border:1px solid var(--line);background:var(--panel2);border-radius:10px;cursor:pointer}
-  .toggles button.on{border-color:var(--warn);color:var(--warn)}
+  .toggles button.on{border-color:var(--warn);color:var(--warn)}  /* interrupteur d'inversion activé */
   .live{margin-top:10px;font-size:12px;color:var(--faint);font-family:var(--num)}
   .live b{color:var(--mut);font-weight:600}
   details summary{cursor:pointer;color:var(--mut);font-size:13px;list-style:none;padding:4px 0}
@@ -90,57 +143,80 @@
   details summary::before{content:'+ ';color:var(--faint)} details[open] summary::before{content:'– '}
   .note{font-size:12.5px;color:var(--mut);line-height:1.55}.note p{margin:8px 0}.note b{color:var(--ink)}
   .saved{font-size:11.5px;color:var(--go);margin-top:8px;height:14px;opacity:0;transition:opacity .3s}.saved.show{opacity:1}
+  /* Respecte le réglage "réduire les animations" du téléphone */
   @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
 <body>
+<!-- =========================== ÉCRAN PRINCIPAL =========================== -->
 <div class="app">
+  <!-- EN-TÊTE : titre + bouton engrenage qui ouvre les Paramètres -->
   <header>
-    <div class="brand">Niveleur <span>van</span></div>
+    <div class="brand">Niveleur <span>van</span> <span id="ver" class="ver"></span></div>
     <button id="openSettings" class="iconbtn" aria-label="Paramètres">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>
     </button>
   </header>
 
+  <!-- SCÈNE : le van (niveau à bulle) + 2 lignes de texte dessous -->
   <div class="stage">
     <div class="vanwrap">
+    <!-- Le dessin du van. viewBox 0..320 (largeur) x 0..500 (hauteur) : c'est un
+         repère interne indépendant des pixels réels. L'AVANT du van est en HAUT.
+         Repères de position :
+           x ≈ 57  = colonne des roues GAUCHE   |  x ≈ 263 = colonne des roues DROITE
+           y ≈ 124 = rangée AVANT               |  y ≈ 368 = rangée ARRIÈRE
+         Roues : w-fl (avant-gauche), w-fr (avant-droite), w-rl (arrière-gauche), w-rr (arrière-droite). -->
     <svg id="van" viewBox="0 0 320 500" role="img" aria-label="Vue de dessus du van avec niveau à bulle">
       <defs>
+        <!-- Dégradés de la bille : ambre (à caler) et vert (de niveau) -->
         <radialGradient id="gAmber" cx="35%" cy="30%"><stop offset="0" stop-color="#ffd79a"/><stop offset="1" stop-color="#F0A64B"/></radialGradient>
         <radialGradient id="gGreen" cx="35%" cy="30%"><stop offset="0" stop-color="#c7f6da"/><stop offset="1" stop-color="#5FD08A"/></radialGradient>
       </defs>
-      <polygon class="nose" points="146,52 174,52 160,38"/>
-      <rect id="body" class="body" x="64" y="52" width="192" height="394" rx="30"/>
-      <line class="grid" x1="160" y1="92" x2="160" y2="406"/>
-      <line class="grid" x1="92" y1="250" x2="228" y2="250"/>
-      <circle class="tol" cx="160" cy="250" r="30"/>
+      <polygon class="nose" points="146,52 174,52 160,38"/>                 <!-- pointe = avant -->
+      <rect id="body" class="body" x="64" y="52" width="192" height="394" rx="30"/>  <!-- carrosserie -->
+      <line class="grid" x1="160" y1="92" x2="160" y2="406"/>               <!-- croix de repère (verticale) -->
+      <line class="grid" x1="92" y1="250" x2="228" y2="250"/>               <!-- croix de repère (horizontale) -->
+      <circle class="tol" cx="160" cy="250" r="30"/>                        <!-- zone de tolérance (de niveau) -->
+      <!-- Les 4 pneus (rectangles arrondis) -->
       <rect id="w-fl" class="wheel" x="40"  y="92"  width="34" height="64" rx="9"/>
       <rect id="w-fr" class="wheel" x="246" y="92"  width="34" height="64" rx="9"/>
       <rect id="w-rl" class="wheel" x="40"  y="336" width="34" height="64" rx="9"/>
       <rect id="w-rr" class="wheel" x="246" y="336" width="34" height="64" rx="9"/>
+      <!-- Étiquettes de hauteur écrites SUR chaque pneu (b-xx = badge de la roue xx).
+           Cachées par défaut ; le JS les affiche et écrit le nombre (hauteur) ou "fixe"/"réf". -->
       <g id="b-fl" style="display:none"><text class="bnum" x="57" y="122">0</text><text class="bunit" x="57" y="138">cm</text></g>
       <g id="b-fr" style="display:none"><text class="bnum" x="263" y="122">0</text><text class="bunit" x="263" y="138">cm</text></g>
       <g id="b-rl" style="display:none"><text class="bnum" x="57" y="366">0</text><text class="bunit" x="57" y="382">cm</text></g>
       <g id="b-rr" style="display:none"><text class="bnum" x="263" y="366">0</text><text class="bunit" x="263" y="382">cm</text></g>
+      <!-- Décalage à appliquer à la cale la moins haute (mode 3 points), écrit sous le pneu concerné -->
+      <text id="o-fl" class="boff" x="57"  y="176" style="display:none">0 cm</text>
+      <text id="o-fr" class="boff" x="263" y="176" style="display:none">0 cm</text>
+      <text id="o-rl" class="boff" x="57"  y="424" style="display:none">0 cm</text>
+      <text id="o-rr" class="boff" x="263" y="424" style="display:none">0 cm</text>
       <text id="centerTxt" class="center-txt" x="160" y="255" style="display:none">de niveau</text>
+      <!-- Croix "X" (roue ignorée) : une par roue, cachée par défaut -->
       <g id="x-fl" class="xcross" style="display:none"><line x1="46" y1="98" x2="68" y2="150"/><line x1="68" y1="98" x2="46" y2="150"/></g>
       <g id="x-fr" class="xcross" style="display:none"><line x1="252" y1="98" x2="274" y2="150"/><line x1="274" y1="98" x2="252" y2="150"/></g>
       <g id="x-rl" class="xcross" style="display:none"><line x1="46" y1="342" x2="68" y2="394"/><line x1="68" y1="342" x2="46" y2="394"/></g>
       <g id="x-rr" class="xcross" style="display:none"><line x1="252" y1="342" x2="274" y2="394"/><line x1="274" y1="342" x2="252" y2="394"/></g>
       <text class="grid" x="160" y="74" text-anchor="middle" style="font-size:11px;fill:#3a4650;font-family:var(--num)">AV</text>
+      <!-- LA BILLE : elle roule vers le point bas. Sa position est mise à jour en JS (moveBall). -->
       <circle id="ball" cx="160" cy="250" r="22" fill="url(#gAmber)"/>
     </svg>
     </div>
+    <!-- Ligne d'état principale, et ligne du "décalage des cales à rampe" (mode 3 points) -->
     <p id="status" class="status-line">Active les capteurs pour mesurer.</p>
     <p id="stagger" class="status-line" style="min-height:0;font-size:12px;color:var(--faint);margin-top:2px"></p>
   </div>
 
+  <!-- PIED : bouton d'action (son libellé change selon l'état, géré par updateBtn()) -->
   <div class="dock">
     <button id="primaryBtn" class="act go">Activer les capteurs</button>
   </div>
 </div>
 
-<!-- Paramètres -->
+<!-- =========================== FEUILLE PARAMÈTRES =========================== -->
 <div id="settings" class="sheet" aria-hidden="true">
   <header>
     <div style="display:flex;align-items:center;justify-content:space-between">
@@ -151,38 +227,46 @@
     </div>
   </header>
   <div class="scroll">
+    <!-- BLOC 1 : dimensions du van + réglages de cale (tout est mémorisé) -->
     <section>
       <p class="sec-title">Dimensions du van</p>
       <div class="fields">
-        <div class="field"><label for="wb">Empattement</label><div class="inp"><input id="wb" type="number" inputmode="decimal" value="360"><span class="u">cm</span></div></div>
-        <div class="field"><label for="tr">Voie (largeur)</label><div class="inp"><input id="tr" type="number" inputmode="decimal" value="175"><span class="u">cm</span></div></div>
+        <!-- Empattement = distance avant/arrière entre essieux ; Voie = largeur entre roues -->
+        <div class="field"><label for="wb">Empattement</label><div class="inp"><input id="wb" type="number" inputmode="decimal" value="309"><span class="u">cm</span></div></div>
+        <div class="field"><label for="tr">Voie (largeur)</label><div class="inp"><input id="tr" type="number" inputmode="decimal" value="168"><span class="u">cm</span></div></div>
       </div>
       <div class="fields">
+        <!-- Hauteur de cale max : au-delà, l'app plafonne. "avance/cm" : profil de la cale (rampe droite, voir plus bas). -->
         <div class="field half"><label for="mh">Hauteur de cale max</label><div class="inp"><input id="mh" type="number" inputmode="decimal" value="10" step="0.5"><span class="u">cm</span></div></div>
-        <div class="field half"><label for="kadv">Cale ronde : avance / cm</label><div class="inp"><input id="kadv" type="number" inputmode="decimal" value="3.5" step="0.1"><span class="u">cm</span></div></div>
+        <div class="field half"><label for="kadv">Cale : avance / cm</label><div class="inp"><input id="kadv" type="number" inputmode="decimal" value="5.35" step="0.05"><span class="u">cm</span></div></div>
       </div>
-      <p id="saved" class="saved">Enregistré.</p>
+      <p id="saved" class="saved">Enregistré.</p>   <!-- petit "Enregistré." clignotant à la modif -->
     </section>
 
+    <!-- BLOC 2 : source de la mesure (capteur ou saisie manuelle) + inversions -->
     <section>
       <p class="sec-title">Mesure</p>
       <div class="seg">
         <button id="modeSensor" class="sel">Capteur</button>
         <button id="modeManual">Manuel</button>
       </div>
+      <!-- Champs visibles seulement en mode Manuel (saisie des angles à la main) -->
       <div id="manualFields" style="display:none">
         <div class="fields">
           <div class="field"><label for="mRoll">Roulis (+ = droite basse)</label><div class="inp"><input id="mRoll" type="number" inputmode="decimal" value="0" step="0.1"><span class="u">°</span></div></div>
           <div class="field"><label for="mPitch">Tangage (+ = avant bas)</label><div class="inp"><input id="mPitch" type="number" inputmode="decimal" value="0" step="0.1"><span class="u">°</span></div></div>
         </div>
       </div>
+      <!-- Inversions : si la bille part du mauvais côté selon le téléphone -->
       <div class="toggles">
         <button id="flipLR">Inverser G / D</button>
         <button id="flipFB">Inverser AV / AR</button>
       </div>
+      <!-- Lecture en direct des angles (utile pour vérifier/calibrer) -->
       <p class="live">Lecture : <b>roulis</b> <span id="liveRoll">0,0</span>° · <b>tangage</b> <span id="livePitch">0,0</span>°</p>
     </section>
 
+    <!-- BLOC 3 : aide (texte explicatif, replié par défaut) -->
     <section>
       <details>
         <summary>Comment ça marche et limites</summary>
@@ -192,7 +276,7 @@
           <p><b>Sol incliné 2 sens : calage sur 3 points.</b> On prend appui sur 3 roues : la plus haute sert de référence (rien), deux roues d'une même paire réelle (un côté ou un essieu) sont calées — à deux hauteurs — pour rejoindre son niveau, et la 4ᵉ roue est ignorée (grise barrée), au sol via la suspension. Les deux axes passent à plat. La roue la plus basse peut demander une cale élevée (jusqu'à voie×tan + empattement×tan) ; au-delà du maximum réglé elle est plafonnée et la pente restante est affichée. Si un seul axe est incliné, l'app pose 2 cales égales et garde les 4 roues au sol.</p>
           <p><b>Limite de hauteur.</b> Si la cale dépasse le maximum réglé, l'app le plafonne, réduit au mieux et affiche l'inclinaison restante.</p>
           <p><b>Précision.</b> Capteurs ≈ ±1°. Pose le téléphone bien à plat, haut vers l'avant. Le signe varie selon les modèles : fie-toi à la bille, corrige avec les inversions.</p>
-          <p><b>Cales rondes : décalage.</b> Avec des cales arrondies (hauteur en continu), les deux roues montent ensemble et tu ne t'arrêtes qu'une fois : pour obtenir deux hauteurs différentes, décale les deux cales dans le sens de la marche de la valeur affichée (la plus haute est engagée en premier). Monte lentement et arrête-toi dès que l'app indique « de niveau ». Le décalage dépend du profil de la cale : règle « avance / cm » (cm d'avancée pour 1 cm de montée) — pour l'affiner, mesure une fois l'avancée pour 5 cm de montée et divise par 5.</p>
+          <p><b>Décalage des cales.</b> Les deux roues montent ensemble et tu ne t'arrêtes qu'une fois : pour obtenir deux hauteurs différentes, décale les deux cales dans le sens de la marche de la valeur affichée (la plus haute est engagée en premier). Monte lentement et arrête-toi dès que l'app indique « de niveau ». Avec nos cales à rampe droite, ce décalage est <b>exact</b> : « avance / cm » = 5,35 cm (rampe de 534,82 mm pour 100 mm de haut, soit ~10,6° ; réglé dans les paramètres). Butée haute : au sommet, un plat de 16,5 cm (165,18 mm) laisse de la marge quand une cale atteint son maximum (10 cm).</p>
           <p><b>Sécurité.</b> Frein à main, cales centrées, montée lente, re-vérifie avant de te garer.</p>
         </div>
       </details>
@@ -201,22 +285,41 @@
 </div>
 
 <script>
+/* ================================ LOGIQUE ================================
+   Tout est enfermé dans une fonction (function(){ ... })() pour ne pas polluer
+   l'espace global. On y trouve, dans l'ordre :
+     A. Constantes et petits outils        E. Lecture des angles actifs
+     B. Mémorisation (localStorage)         F. Géométrie / PHYSIQUE (le cœur)
+     C. Variables d'état                    G. Affichage (rendu du dessin)
+     D. Capteurs et bouton                  H. Réglages + écouteurs + démarrage
+   ======================================================================== */
 (function(){
-  const $=id=>document.getElementById(id);
-  const TOL=0.4, MAXA=6, D2R=Math.PI/180;
-  const C={x:160,y:250,hx:70,hy:150};   // centre + demi-amplitudes du déplacement de la bille
+  /* ---- A. Constantes et petits outils ---- */
+  const $=id=>document.getElementById(id);   // raccourci : $('x') = l'élément d'id "x"
+  const TOL=0.4;     // seuil (en °) sous lequel on considère un axe "de niveau"
+  const MAXA=6;      // angle (en °) correspondant au bord du niveau à bulle (pour placer la bille)
+  const D2R=Math.PI/180;   // conversion degrés -> radians (Math.tan attend des radians)
+  // Repère de la bille dans le dessin : centre (x,y) et demi-amplitudes de déplacement (hx,hy)
+  const C={x:160,y:250,hx:70,hy:150};
+  // Numéro de version : à incrémenter à chaque évolution. Affiché dans l'en-tête et l'onglet.
+  const VERSION='1.2';
+  { const v=$('ver'); if(v)v.textContent='v'+VERSION; document.title='Niveleur van v'+VERSION; }
 
-  const KEY='niveleur-van';
+  /* ---- B. Mémorisation : on sauvegarde les réglages dans le navigateur ---- */
+  const KEY='niveleur-van';   // clé de stockage
   function load(){try{return JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){return{}}}
+  // persist() : écrit tous les réglages actuels dans localStorage
   function persist(){try{localStorage.setItem(KEY,JSON.stringify({
     wb:$('wb').value,tr:$('tr').value,mh:$('mh').value,kadv:$('kadv').value,
     mode,flipLR,flipFB,mRoll:$('mRoll').value,mPitch:$('mPitch').value
   }))}catch(e){}}
 
-  let mode='sensor',listening=false,held=false;
-  let liveRoll=0,livePitch=0,emaR=0,emaP=0,seeded=false;
-  let flipLR=false,flipFB=false,measuring=false,samples=[];
+  /* ---- C. Variables d'état (elles changent pendant l'utilisation) ---- */
+  let mode='sensor',listening=false,held=false;   // mode capteur/manuel ; capteurs actifs ? ; affichage figé ?
+  let liveRoll=0,livePitch=0,emaR=0,emaP=0,seeded=false;  // angles courants + moyenne lissée (EMA)
+  let flipLR=false,flipFB=false,measuring=false,samples=[]; // inversions ; mesure en cours ; échantillons
 
+  // restore() : au démarrage, relit les réglages mémorisés et remplit les champs
   (function restore(){
     const s=load();
     if(s.wb!=null)$('wb').value=s.wb; if(s.tr!=null)$('tr').value=s.tr; if(s.mh!=null)$('mh').value=s.mh;
@@ -229,16 +332,20 @@
   })();
 
   let savedTimer=null;
+  // flashSaved() : fait apparaître brièvement le message "Enregistré."
   function flashSaved(){const el=$('saved');el.classList.add('show');clearTimeout(savedTimer);savedTimer=setTimeout(()=>el.classList.remove('show'),1200);}
 
-  /* capteurs */
+  /* ---- D. Capteurs et bouton ---- */
+  // onOrient() : appelée en continu par le téléphone. e.gamma = roulis, e.beta = tangage.
+  // On lisse la valeur (moyenne mobile EMA à 18 %) pour que la bille ne tremble pas.
   function onOrient(e){
     if(e.beta==null||e.gamma==null)return;
-    if(!seeded){emaR=e.gamma;emaP=e.beta;seeded=true;}
+    if(!seeded){emaR=e.gamma;emaP=e.beta;seeded=true;}   // 1re valeur : on initialise la moyenne
     emaR=emaR*0.82+e.gamma*0.18; emaP=emaP*0.82+e.beta*0.18;
-    if(measuring)samples.push([emaR,emaP]);
-    if(!held){liveRoll=emaR;livePitch=emaP;requestRender();}
+    if(measuring)samples.push([emaR,emaP]);              // pendant "Mesurer", on collecte
+    if(!held){liveRoll=emaR;livePitch=emaP;requestRender();} // si non figé, on met à jour l'affichage
   }
+  // enableSensors() : demande l'autorisation (obligatoire sur iPhone) puis écoute les capteurs.
   async function enableSensors(){
     try{
       if(typeof DeviceOrientationEvent!=='undefined'&&typeof DeviceOrientationEvent.requestPermission==='function'){
@@ -252,24 +359,27 @@
     }
     setStatus('Pas de capteur — mode Manuel.','bad');return false;
   }
+  // startMeasure() : mesure = 2 s de moyenne, PUIS affichage figé 2 s, PUIS retour au direct.
   function startMeasure(){
     samples=[];measuring=true;held=false;$('primaryBtn').textContent='Mesure…';
-    setTimeout(()=>{
+    setTimeout(()=>{                              // après 2 s de collecte...
       measuring=false;
-      if(samples.length){let sr=0,sp=0;samples.forEach(s=>{sr+=s[0];sp+=s[1]});liveRoll=sr/samples.length;livePitch=sp/samples.length;held=true;}
+      if(samples.length){let sr=0,sp=0;samples.forEach(s=>{sr+=s[0];sp+=s[1]});liveRoll=sr/samples.length;livePitch=sp/samples.length;held=true;} // moyenne -> figé
       requestRender();
       if(held){
         $('primaryBtn').textContent='Figé 2 s…';
-        setTimeout(()=>{ held=false; updateBtn(); requestRender(); },2000);   // dégèle et revient au direct
+        setTimeout(()=>{ held=false; updateBtn(); requestRender(); },2000);   // 2 s plus tard : dégèle et revient au direct
       }else{ updateBtn(); }
     },2000);
   }
+  // primaryAction() : ce que fait le bouton principal selon l'état
   function primaryAction(){
-    if(mode==='manual')return;
-    if(!listening){enableSensors().then(ok=>{if(ok)startMeasure();});return;}
-    if(held){held=false;updateBtn();requestRender();return;}   // reprendre le direct
-    startMeasure();
+    if(mode==='manual')return;                                   // en manuel, pas de bouton
+    if(!listening){enableSensors().then(ok=>{if(ok)startMeasure();});return;} // 1er clic : activer puis mesurer
+    if(held){held=false;updateBtn();requestRender();return;}     // si figé : reprendre le direct
+    startMeasure();                                              // sinon : lancer une mesure
   }
+  // updateBtn() : met à jour le libellé et la couleur du bouton principal
   function updateBtn(){
     const b=$('primaryBtn');
     if(mode==='manual'){b.style.display='none';return;}
@@ -278,101 +388,154 @@
     b.classList.toggle('go', !listening || held);
   }
 
+  /* ---- E. Lecture des angles actifs (capteur ou saisie manuelle) ---- */
   function activeAngles(){
     if(mode==='manual')return{roll:parseFloat($('mRoll').value)||0,pitch:parseFloat($('mPitch').value)||0};
     return{roll:liveRoll,pitch:livePitch};
   }
 
-  /* calcul : sol incliné 2 sens = calage sur 3 POINTS.
-     Réf = roue la plus haute (rien). On cale une paire RÉELLE (côté ou essieu) à 2 hauteurs
-     pour rejoindre son niveau. La 4e roue est ignorée : au sol via la suspension.
-     Un seul axe incliné → 2 cales égales, 4 roues au sol. */
+  /* ==================== F. GÉOMÉTRIE / PHYSIQUE (le cœur) ====================
+     But : à partir du roulis et du tangage, décider QUELLES roues caler et de COMBIEN.
+
+     Idées clés :
+       - R = voie × tan(roulis)      = différence de hauteur gauche/droite à combler
+       - P = empattement × tan(tangage) = différence de hauteur avant/arrière à combler
+       - lowSide = côté bas (gauche/droite), lowEnd = extrémité basse (avant/arrière)
+       - On ne cale JAMAIS en diagonale (impossible à monter en roulant) : toujours une
+         PAIRE réelle (même côté, ou même essieu).
+
+     Trois cas :
+       1) roulis seul  -> 2 cales égales sur le côté bas (mode 'side')
+       2) tangage seul -> 2 cales égales sur l'essieu bas (mode 'end')
+       3) les deux     -> calage sur 3 POINTS (mode 'tripod') :
+            la roue la plus HAUTE sert de référence (aucune cale),
+            on cale 2 roues d'une paire réelle à 2 hauteurs différentes,
+            la 4ᵉ roue (la plus basse) est IGNORÉE : elle reste au sol sur la suspension.
+     ======================================================================== */
+
+  // wid(côté, extrémité) -> identifiant de la roue correspondante dans le SVG
   function wid(side,end){return side==='gauche'?(end==='avant'?'w-fl':'w-rl'):(end==='avant'?'w-fr':'w-rr');}
+
+  // planeResid(p1,p2,p3) : à partir de 3 points d'appui (x,y,z = hauteur), calcule
+  // l'inclinaison restante du plan qui passe par ces 3 points (produit vectoriel -> normale).
+  // Sert à connaître la pente qui subsiste quand une cale a dû être plafonnée.
   function planeResid(p1,p2,p3){
     const ux=p2.x-p1.x,uy=p2.y-p1.y,uz=p2.z-p1.z, vx=p3.x-p1.x,vy=p3.y-p1.y,vz=p3.z-p1.z;
-    const nx=uy*vz-uz*vy, ny=uz*vx-ux*vz, nz=ux*vy-uy*vx;
+    const nx=uy*vz-uz*vy, ny=uz*vx-ux*vz, nz=ux*vy-uy*vx;   // normale = u × v
     if(Math.abs(nz)<1e-9) return{worst:0};
+    // pentes du plan selon x et y -> angles ; on renvoie le pire des deux
     return{worst:Math.max(Math.atan(Math.abs(ny/nz))/D2R, Math.atan(Math.abs(nx/nz))/D2R)};
   }
+
+  // compute() : renvoie tout ce qu'il faut afficher (roues à caler, hauteurs, mode, résiduel...)
   function compute(){
-    const L=Math.max(1,parseFloat($('wb').value)||0);
-    const W=Math.max(1,parseFloat($('tr').value)||0);
-    const maxH=Math.max(0.1,parseFloat($('mh').value)||0);
+    // Dimensions et réglages (avec garde-fous pour éviter 0 ou vide)
+    const L=Math.max(1,parseFloat($('wb').value)||0);   // empattement (cm)
+    const W=Math.max(1,parseFloat($('tr').value)||0);   // voie (cm)
+    const maxH=Math.max(0.1,parseFloat($('mh').value)||0); // hauteur de cale max (cm)
     const {roll,pitch}=activeAngles();
-    const rA=Math.abs(roll),pA=Math.abs(pitch);
+    const rA=Math.abs(roll),pA=Math.abs(pitch);         // amplitudes (valeurs absolues)
+
+    // Côté bas / extrémité basse. Les "inversions" corrigent le signe selon le téléphone.
+    // NB : l'avant/arrière est INVERSÉ par défaut (choix retenu pour ce van).
     let lowSide=(roll>=0)?'droite':'gauche'; if(flipLR)lowSide=(lowSide==='droite')?'gauche':'droite';
-    let lowEnd=(pitch>=0)?'arrière':'avant'; if(flipFB)lowEnd=(lowEnd==='avant')?'arrière':'avant';  // AV/AR inversé par défaut
-    const highSide=lowSide==='droite'?'gauche':'droite';
-    const highEnd =lowEnd==='avant'?'arrière':'avant';
-    const level=rA<TOL&&pA<TOL;
-    const R=W*Math.tan(rA*D2R), P=L*Math.tan(pA*D2R);
+    let lowEnd=(pitch>=0)?'arrière':'avant'; if(flipFB)lowEnd=(lowEnd==='avant')?'arrière':'avant';
+    const highSide=lowSide==='droite'?'gauche':'droite';  // côté haut = opposé
+    const highEnd =lowEnd==='avant'?'arrière':'avant';    // extrémité haute = opposée
+
+    const level=rA<TOL&&pA<TOL;                          // déjà de niveau ?
+    const R=W*Math.tan(rA*D2R), P=L*Math.tan(pA*D2R);     // hauteurs à combler (voir en-tête)
+
+    // cap(besoin,distance) : plafonne une cale à maxH et calcule la pente restante si plafonnée
     const cap=(need,dist)=>{const applied=Math.min(need,maxH);return{applied,resid:Math.atan(Math.max(0,need-applied)/dist)/D2R,capped:need>maxH+1e-9};};
+    // pos(côté,extrémité) : position (x,y) de la roue dans un repère centré sur le van (pour planeResid)
     const pos=(s,e)=>({x:(e==='avant'?L/2:-L/2),y:(s==='droite'?W/2:-W/2)});
+    // znat(côté,extrémité) : hauteur "naturelle" du coin (avant calage), par rapport au centre
     const znat=(s,e)=>((s===highSide?R/2:-R/2)+(e===highEnd?P/2:-P/2));
-    let chocks=[],refs=[],ignored=null,mode2='level',worst=0,anyCapped=false,stagger=0,staggerHigh=0;
+
+    // Résultats à remplir
+    let chocks=[],refs=[],ignored=null,mode2='level',worst=0,anyCapped=false,stagger=0,staggerHigh=0,staggerWheel=null;
     if(!level){
-      if(pA<TOL){                                 // roulis seul : paire côté bas (égales)
+      if(pA<TOL){                                 // --- CAS 1 : roulis seul ---
         const c=cap(R,W); mode2='side'; worst=c.resid; anyCapped=c.capped;
-        chocks=[{wheel:wid(lowSide,'avant'),height:c.applied},{wheel:wid(lowSide,'arrière'),height:c.applied}];
-        refs=[wid(highSide,'avant'),wid(highSide,'arrière')];
-      }else if(rA<TOL){                           // tangage seul : paire essieu bas (égales)
+        chocks=[{wheel:wid(lowSide,'avant'),height:c.applied},{wheel:wid(lowSide,'arrière'),height:c.applied}]; // 2 cales égales, côté bas
+        refs=[wid(highSide,'avant'),wid(highSide,'arrière')];  // côté haut = référence (4 roues au sol)
+      }else if(rA<TOL){                           // --- CAS 2 : tangage seul ---
         const c=cap(P,L); mode2='end'; worst=c.resid; anyCapped=c.capped;
-        chocks=[{wheel:wid('gauche',lowEnd),height:c.applied},{wheel:wid('droite',lowEnd),height:c.applied}];
+        chocks=[{wheel:wid('gauche',lowEnd),height:c.applied},{wheel:wid('droite',lowEnd),height:c.applied}]; // 2 cales égales, essieu bas
         refs=[wid('gauche',highEnd),wid('droite',highEnd)];
-      }else{                                      // compound : 3 points
+      }else{                                      // --- CAS 3 : les deux -> 3 POINTS ---
         mode2='tripod';
-        const sidePair=rA>=pA;
-        const a={s:lowSide,e:lowEnd,need:R+P};    // roue la plus basse : cale la plus haute
+        const sidePair=rA>=pA;                    // on cale la paire de l'axe le plus incliné
+        // a = roue la plus basse (besoin le plus grand = R+P). b = l'autre roue de la paire.
+        const a={s:lowSide,e:lowEnd,need:R+P};
         const b=sidePair?{s:lowSide,e:highEnd,need:R}:{s:highSide,e:lowEnd,need:P};
-        ignored=sidePair?wid(highSide,lowEnd):wid(lowSide,highEnd);
-        [a,b].forEach(k=>{k.applied=Math.min(k.need,maxH);k.capped=k.need>maxH+1e-9;});
+        ignored=sidePair?wid(highSide,lowEnd):wid(lowSide,highEnd);  // la 4ᵉ roue : ignorée
+        [a,b].forEach(k=>{k.applied=Math.min(k.need,maxH);k.capped=k.need>maxH+1e-9;}); // plafonnage
+        // 3 points d'appui = référence (roue haute) + les 2 cales -> pente restante
         const p1={...pos(highSide,highEnd),z:znat(highSide,highEnd)};
         const p2={...pos(a.s,a.e),z:znat(a.s,a.e)+a.applied};
         const p3={...pos(b.s,b.e),z:znat(b.s,b.e)+b.applied};
         worst=planeResid(p1,p2,p3).worst; anyCapped=a.capped||b.capped;
         chocks=[{wheel:wid(a.s,a.e),height:a.applied},{wheel:wid(b.s,b.e),height:b.applied}];
-        refs=[wid(highSide,highEnd)];
-        // décalage des 2 cales rondes dans le sens de la marche (les 2 roues montent ensemble)
-        const kadv=Math.max(0.1,parseFloat($('kadv').value)||3.5);
+        refs=[wid(highSide,highEnd)];             // la roue la plus haute = référence
+        // Décalage des 2 cales (rampe droite) dans le sens de la marche : comme les 2 roues
+        // montent ensemble, pour obtenir 2 hauteurs différentes il faut décaler les cales.
+        // Rampe linéaire -> relation EXACTE : décalage = (avance par cm) × (différence de hauteur).
+        const kadv=Math.max(0.1,parseFloat($('kadv').value)||5.35);
         staggerHigh=Math.max(a.applied,b.applied);
         stagger=kadv*(staggerHigh-Math.min(a.applied,b.applied));
+        // Roue de la cale la MOINS haute : c'est elle qu'on décale dans le sens de la marche.
+        staggerWheel=(a.applied<=b.applied)?wid(a.s,a.e):wid(b.s,b.e);
       }
     }
-    return{L,W,maxH,rA,pA,lowSide,lowEnd,level,mode2,chocks,refs,ignored,worst,anyCapped,stagger,staggerHigh};
+    // On renvoie tout, l'affichage (render) s'en sert.
+    return{L,W,maxH,rA,pA,lowSide,lowEnd,level,mode2,chocks,refs,ignored,worst,anyCapped,stagger,staggerHigh,staggerWheel};
   }
 
+  /* ==================== G. AFFICHAGE (rendu du dessin) ==================== */
   let pending=false;
+  // requestRender() : demande un rafraîchissement, mais au plus une fois par image (fluide).
   function requestRender(){if(!pending){pending=true;requestAnimationFrame(()=>{pending=false;render();});}}
-  const f1=x=>x.toFixed(1).replace('.',',');
+  const f1=x=>x.toFixed(1).replace('.',',');   // formatte un nombre : 1 décimale, virgule française
+  // setStatus() : écrit la ligne d'état + applique la couleur (ok/warn/bad)
   function setStatus(t,cls){const s=$('status');s.textContent=t;s.className='status-line'+(cls?' '+cls:'');}
+  // badges() : correspondance roue -> son étiquette de hauteur
   function badges(){return{'w-fl':'b-fl','w-fr':'b-fr','w-rl':'b-rl','w-rr':'b-rr'}}
+  // clearWheels() : remet toutes les roues, étiquettes et croix à zéro avant de redessiner
   function clearWheels(){
     ['w-fl','w-fr','w-rl','w-rr'].forEach(id=>$(id).classList.remove('hot','hotbad','susp','fixe','ignored'));
     ['x-fl','x-fr','x-rl','x-rr'].forEach(id=>{const g=$(id);if(g)g.style.display='none';});
     ['b-fl','b-fr','b-rl','b-rr'].forEach(id=>{const g=$(id);g.style.display='none';g.classList.remove('role-chock','role-fixe','role-susp');const u=g.querySelector('.bunit');if(u)u.style.display='';});
+    ['o-fl','o-fr','o-rl','o-rr'].forEach(id=>{const g=$(id);if(g)g.style.display='none';});
   }
 
+  // moveBall() : place la bille. Elle roule vers le point bas (côté + extrémité bas).
+  // On convertit l'angle en fraction (angle/MAXA) puis en déplacement dans le dessin.
   function moveBall(rA,pA,lowSide,lowEnd,color){
-    const mx=Math.min(rA/MAXA,1),my=Math.min(pA/MAXA,1);
-    const bx=C.x+(lowSide==='droite'?1:-1)*mx*C.hx;
-    const by=C.y+(lowEnd==='avant'?-1:1)*my*C.hy;
+    const mx=Math.min(rA/MAXA,1),my=Math.min(pA/MAXA,1);          // fractions (max 1 = bord)
+    const bx=C.x+(lowSide==='droite'?1:-1)*mx*C.hx;               // x : droite = +, gauche = -
+    const by=C.y+(lowEnd==='avant'?-1:1)*my*C.hy;                 // y : avant = haut (-), arrière = bas (+)
     const b=$('ball');b.setAttribute('cx',bx.toFixed(1));b.setAttribute('cy',by.toFixed(1));
     b.setAttribute('fill',color==='green'?'url(#gGreen)':'url(#gAmber)');
   }
 
+  // render() : dessine tout à partir du résultat de compute()
   function render(){
     const c=compute();
-    $('liveRoll').textContent=f1(c.rA); $('livePitch').textContent=f1(c.pA);
+    $('liveRoll').textContent=f1(c.rA); $('livePitch').textContent=f1(c.pA);  // lecture live (réglages)
     clearWheels();
     $('stagger').textContent='';
     const body=$('body'),center=$('centerTxt');
     body.classList.remove('ok'); center.style.display='none';
 
+    // Cas particulier : capteurs pas encore activés -> on invite à les activer
     if(mode==='sensor'&&!listening){
       moveBall(0,0,'droite','avant','amber');
       setStatus('Active les capteurs pour mesurer.','');
       return;
     }
+    // Cas : déjà de niveau -> bille verte au centre, van vert, texte "de niveau"
     if(c.level){
       moveBall(0,0,'droite','avant','green');
       body.classList.add('ok'); center.style.display='';
@@ -380,21 +543,30 @@
       return;
     }
 
-    const strong=c.worst>=1.5;
+    // Cas général : il faut caler
+    const strong=c.worst>=1.5;                    // "reste très incliné" -> rouge
     moveBall(c.rA,c.pA,c.lowSide,c.lowEnd,'amber');
     const bmap=badges();
+    // label() : affiche une étiquette (nombre + unité, ou texte "fixe"/"réf") sur une roue
     function label(id,cls,txt,unit){
       const g=$(bmap[id]); g.style.display=''; g.classList.add(cls);
       g.querySelector('.bnum').textContent=txt;
       const u=g.querySelector('.bunit'); if(unit){u.style.display='';u.textContent=unit;} else {u.style.display='none';}
     }
+    // 1) roues à caler (orange) avec leur hauteur
     c.chocks.forEach(ch=>{ $(ch.wheel).classList.add(strong?'hotbad':'hot'); label(ch.wheel,'role-chock',f1(ch.height),'cm'); });
+    // 2) roue(s) de référence (vert) : "fixe" (cas 1/2) ou "réf" (cas 3 points)
     (c.refs||[]).forEach(id=>{ $(id).classList.add('fixe'); label(id,'role-fixe', c.mode2==='tripod'?'réf':'fixe'); });
+    // 3) roue ignorée (gris + croix), seulement en mode 3 points
     if(c.ignored){ $(c.ignored).classList.add('ignored'); const x=$('x'+c.ignored.slice(1)); if(x)x.style.display=''; }
-    if(c.mode2==='tripod' && c.stagger>0.2){
-      $('stagger').textContent='Décalage cales ≈ '+f1(c.stagger)+' cm (sens de la marche) · engage d\u2019abord la cale '+f1(c.staggerHigh)+' cm';
+    // 4) décalage des cales à rampe (mode 3 points) : écrit SOUS le pneu de la cale la moins haute
+    if(c.mode2==='tripod' && c.stagger>0.2 && c.staggerWheel){
+      const oe=$('o'+c.staggerWheel.slice(1));   // 'w-rl' -> 'o-rl'
+      if(oe){ oe.textContent='\u21D5 '+f1(c.stagger)+' cm'; oe.style.display=''; }
+      $('stagger').textContent='Cale la moins haute : décale-la de '+f1(c.stagger)+' cm (sens de la marche) · engage d\u2019abord la cale '+f1(c.staggerHigh)+' cm';
     }
 
+    // Ligne d'état : "À plat une fois calé" ou "Restera ~x°..." (honnête sur le résiduel)
     if(c.worst<TOL && !c.anyCapped){
       setStatus('À plat une fois calé'+(c.mode2==='tripod'?' · 1 roue ignorée (pend)':''),'ok');
     }else{
@@ -406,7 +578,8 @@
     }
   }
 
-  /* modes / réglages */
+  /* ==================== H. Réglages + écouteurs + démarrage ==================== */
+  // applyMode() : affiche/masque les champs selon le mode Capteur/Manuel
   function applyMode(){
     $('modeSensor').classList.toggle('sel',mode==='sensor');
     $('modeManual').classList.toggle('sel',mode==='manual');
@@ -415,19 +588,22 @@
   }
   function switchMode(m){mode=m;held=false;applyMode();persist();requestRender();}
 
+  // --- Écouteurs d'événements (clics, saisies) ---
   $('primaryBtn').addEventListener('click',primaryAction);
-  $('van').addEventListener('click',()=>{ if(mode==='sensor'&&listening) startMeasure(); });
+  $('van').addEventListener('click',()=>{ if(mode==='sensor'&&listening) startMeasure(); }); // toucher le van = mesurer
   $('openSettings').addEventListener('click',()=>{$('settings').classList.add('open');$('settings').setAttribute('aria-hidden','false');});
   $('closeSettings').addEventListener('click',()=>{$('settings').classList.remove('open');$('settings').setAttribute('aria-hidden','true');});
   $('modeSensor').addEventListener('click',()=>switchMode('sensor'));
   $('modeManual').addEventListener('click',()=>switchMode('manual'));
   $('flipLR').addEventListener('click',()=>{flipLR=!flipLR;$('flipLR').classList.toggle('on',flipLR);persist();requestRender();});
   $('flipFB').addEventListener('click',()=>{flipFB=!flipFB;$('flipFB').classList.toggle('on',flipFB);persist();requestRender();});
+  // À chaque modif d'un champ : mémoriser + recalculer
   ['wb','tr','mh','kadv'].forEach(id=>$(id).addEventListener('input',()=>{persist();flashSaved();requestRender();}));
   ['mRoll','mPitch'].forEach(id=>$(id).addEventListener('input',()=>{persist();requestRender();}));
 
-  render();
+  render();   // premier affichage
 
+  // Enregistre le service worker (cache hors-ligne). Sans effet dans l'aperçu, actif sur le tél.
   if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{});});}
 })();
 </script>
