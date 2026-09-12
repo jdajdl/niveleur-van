@@ -497,7 +497,8 @@
   let pending=false;
   // requestRender() : demande un rafraîchissement, mais au plus une fois par image (fluide).
   function requestRender(){if(!pending){pending=true;requestAnimationFrame(()=>{pending=false;render();});}}
-  const f1=x=>x.toFixed(1).replace('.',',');   // formatte un nombre : 1 décimale, virgule française
+  const f1=x=>x.toFixed(1).replace('.',',');   // formatte un nombre : 1 décimale, virgule française (angles)
+  const fc=x=>String(Math.round(x));           // formatte une valeur en cm : arrondi à l'entier, sans virgule
   // setStatus() : écrit la ligne d'état + applique la couleur (ok/warn/bad)
   function setStatus(t,cls){const s=$('status');s.textContent=t;s.className='status-line'+(cls?' '+cls:'');}
   // badges() : correspondance roue -> son étiquette de hauteur
@@ -554,7 +555,7 @@
       const u=g.querySelector('.bunit'); if(unit){u.style.display='';u.textContent=unit;} else {u.style.display='none';}
     }
     // 1) roues à caler (orange) avec leur hauteur
-    c.chocks.forEach(ch=>{ $(ch.wheel).classList.add(strong?'hotbad':'hot'); label(ch.wheel,'role-chock',f1(ch.height),'cm'); });
+    c.chocks.forEach(ch=>{ $(ch.wheel).classList.add(strong?'hotbad':'hot'); label(ch.wheel,'role-chock',fc(ch.height),'cm'); });
     // 2) roue(s) de référence (vert) : "fixe" (cas 1/2) ou "réf" (cas 3 points)
     (c.refs||[]).forEach(id=>{ $(id).classList.add('fixe'); label(id,'role-fixe', c.mode2==='tripod'?'réf':'fixe'); });
     // 3) roue ignorée (gris + croix), seulement en mode 3 points
@@ -562,8 +563,8 @@
     // 4) décalage des cales à rampe (mode 3 points) : écrit SOUS le pneu de la cale la moins haute
     if(c.mode2==='tripod' && c.stagger>0.2 && c.staggerWheel){
       const oe=$('o'+c.staggerWheel.slice(1));   // 'w-rl' -> 'o-rl'
-      if(oe){ oe.textContent='\u21D5 '+f1(c.stagger)+' cm'; oe.style.display=''; }
-      $('stagger').textContent='Cale la moins haute : décale-la de '+f1(c.stagger)+' cm (sens de la marche) · engage d\u2019abord la cale '+f1(c.staggerHigh)+' cm';
+      if(oe){ oe.textContent='\u21D5 '+fc(c.stagger)+' cm'; oe.style.display=''; }
+      $('stagger').textContent='Cale la moins haute : décale-la de '+fc(c.stagger)+' cm (sens de la marche) · engage d\u2019abord la cale '+fc(c.staggerHigh)+' cm';
     }
 
     // Ligne d'état : "À plat une fois calé" ou "Restera ~x°..." (honnête sur le résiduel)
@@ -572,7 +573,7 @@
     }else{
       let t='Restera ~'+f1(c.worst)+'°';
       if(c.mode2==='side') t+=' avant-arrière'; else if(c.mode2==='end') t+=' gauche-droite';
-      if(c.anyCapped) t+=' (cale plafonnée à '+f1(c.maxH)+' cm)';
+      if(c.anyCapped) t+=' (cale plafonnée à '+fc(c.maxH)+' cm)';
       if(c.mode2==='tripod') t+=' · 1 roue ignorée';
       setStatus(t, strong?'bad':'warn');
     }
