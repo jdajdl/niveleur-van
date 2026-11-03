@@ -280,33 +280,22 @@
           <p><b>Sol incliné 2 sens : calage sur 3 points.</b> On prend appui sur 3 roues : la plus haute sert de référence (rien), deux roues d'une même paire réelle (un côté ou un essieu) sont calées — à deux hauteurs — pour rejoindre son niveau, et la 4ᵉ roue est ignorée (grise barrée), au sol via la suspension. Les deux axes passent à plat. La roue la plus basse peut demander une cale élevée (jusqu'à voie×tan + empattement×tan) ; au-delà du maximum réglé elle est plafonnée et la pente restante est affichée. Si un seul axe est incliné, l'app pose 2 cales égales et garde les 4 roues au sol.</p>
           <p><b>Limite de hauteur.</b> Si la cale dépasse le maximum réglé, l'app le plafonne, réduit au mieux et affiche l'inclinaison restante.</p>
           <p><b>Précision.</b> Capteurs ≈ ±1°. Pose le téléphone bien à plat, haut vers l'avant. Le signe varie selon les modèles : fie-toi à la bille, corrige avec les inversions.</p>
-          <p><b>Cales à paliers (plaques Berger).</b> Les plaques s'emboîtent comme des Lego : la 1ʳᵉ fait <b>3,2 cm</b>, chaque plaque suivante n'ajoute que <b>2,5 cm</b> (elles se chevauchent de 0,7 cm). On alterne plaques carrées et rectangulaire pour décaler l'empilage et former une montée en escalier :</p>
-          <svg viewBox="0 0 300 172" width="100%" style="max-width:320px;display:block;margin:4px auto 2px" role="img" aria-label="Schéma d'assemblage des plaques en escalier">
-            <line x1="16" y1="140" x2="286" y2="140" stroke="var(--line)" stroke-width="1.5"/>
-            <!-- silhouette de l'escalier (plaques empilées et décalées) -->
-            <path d="M34,140 L34,111 L98,111 L98,89 L152,89 L152,71 L250,71 L250,140 Z" fill="var(--panel2)" stroke="var(--ink)" stroke-width="1.6" stroke-linejoin="round"/>
-            <line x1="34" y1="111" x2="250" y2="111" stroke="var(--line)" stroke-width="1" opacity=".6"/>
-            <line x1="98" y1="89"  x2="250" y2="89"  stroke="var(--line)" stroke-width="1" opacity=".6"/>
-            <!-- pneu sur le plateau haut -->
-            <circle cx="201" cy="47" r="23" fill="none" stroke="var(--warn)" stroke-width="5"/>
-            <circle cx="201" cy="47" r="6" fill="var(--warn)"/>
-            <!-- bouchon de pneu = butée au sommet -->
-            <rect x="251" y="46" width="15" height="94" rx="2" fill="var(--faint)"/>
-            <!-- repères de hauteur (pointillés verts) -->
-            <g stroke="var(--go)" stroke-width="1" stroke-dasharray="3 3" opacity=".9">
-              <line x1="34" y1="111" x2="16" y2="111"/><line x1="98" y1="89" x2="16" y2="89"/><line x1="152" y1="71" x2="16" y2="71"/>
-            </g>
-            <g fill="var(--go)" font-family="var(--num)" font-size="9" text-anchor="start">
-              <text x="17" y="108">3,2</text><text x="17" y="86">5,7</text><text x="17" y="68">8,2</text>
-            </g>
-            <!-- nombre de plaques par marche -->
-            <g fill="var(--mut)" font-family="var(--num)" font-size="8.5" text-anchor="middle">
-              <text x="64" y="129">1 pl.</text><text x="123" y="106">2 pl.</text><text x="175" y="86">3 pl.</text>
-            </g>
-            <text x="36" y="156" fill="var(--mut)" font-family="var(--num)" font-size="8.5">montée →</text>
-            <text x="258" y="156" fill="var(--faint)" font-family="var(--num)" font-size="8" text-anchor="middle">butée</text>
+          <p><b>Cales à paliers (plaques Berger).</b> Les plaques s'emboîtent comme des Lego : la 1ʳᵉ fait <b>3,2 cm</b>, chaque plaque au-dessus n'ajoute que <b>2,5 cm</b> (chevauchement de 0,7 cm). Pour qu'une roue monte sur un plateau, on construit un <b>escalier soutenu jusqu'au sol</b> — il faut donc plus de plaques que la hauteur seule. Voici les 4 configurations (hauteur du plateau · plaques nécessaires par roue) :</p>
+          <svg viewBox="0 0 300 136" width="100%" style="max-width:320px;display:block;margin:4px auto 2px" role="img" aria-label="Schémas de montage des plaques : 4 configurations en escalier">
+            <line x1="10" y1="104" x2="290" y2="104" stroke="var(--line)" stroke-width="1.3"/>
+            <!-- escaliers (une pile par marche, soutenue jusqu'au sol) -->
+            <path d="M16,104 L16,96 L27,96 L27,104 Z" fill="var(--panel2)" stroke="var(--ink)" stroke-width="1.4" stroke-linejoin="round"/>
+            <path d="M86,104 L86,96 L97,96 L97,89 L108,89 L108,104 Z" fill="var(--panel2)" stroke="var(--ink)" stroke-width="1.4" stroke-linejoin="round"/>
+            <path d="M156,104 L156,96 L167,96 L167,89 L178,89 L178,83 L189,83 L189,104 Z" fill="var(--panel2)" stroke="var(--ink)" stroke-width="1.4" stroke-linejoin="round"/>
+            <path d="M232,104 L232,96 L243,96 L243,89 L254,89 L254,83 L265,83 L265,76 L276,76 L276,104 Z" fill="var(--panel2)" stroke="var(--ink)" stroke-width="1.4" stroke-linejoin="round"/>
+            <!-- × = plaques carrées sur chaque marche -->
+            <g fill="var(--mut)" font-family="var(--num)" font-size="7" text-anchor="middle"><text x="22" y="102">×</text><text x="92" y="102">×</text><text x="103" y="95">×</text><text x="162" y="102">×</text><text x="173" y="95">×</text><text x="184" y="89">×</text><text x="238" y="102">×</text><text x="249" y="95">×</text><text x="260" y="89">×</text><text x="271" y="82">×</text></g>
+            <!-- bouchon de pneu (butée) en haut de la plus haute config -->
+            <path d="M277,76 q7,0 7,-10 l0,34 l-7,0 Z" fill="var(--faint)"/>
+            <!-- libellés : hauteur + total plaques par roue -->
+            <g font-family="var(--num)" text-anchor="middle"><text x="22" y="118" fill="var(--mut)" font-size="7.5">3,2 cm</text><text x="22" y="128" fill="var(--go)" font-size="8" font-weight="700">1 plaque</text><text x="97" y="118" fill="var(--mut)" font-size="7.5">5,7 cm</text><text x="97" y="128" fill="var(--go)" font-size="8" font-weight="700">3 plaques</text><text x="173" y="118" fill="var(--mut)" font-size="7.5">8,2 cm</text><text x="173" y="128" fill="var(--go)" font-size="8" font-weight="700">6 plaques</text><text x="254" y="118" fill="var(--mut)" font-size="7.5">10,7 cm</text><text x="254" y="128" fill="var(--go)" font-size="8" font-weight="700">10 plaques</text></g>
           </svg>
-          <p>L'app affiche sous chaque pneu orange le <b>nombre de plaques</b> à empiler, et choisit le palier le plus proche du besoin : 1→3,2 · 2→5,7 · 3→8,2 · 4→10,7 cm. Monte une pile <b>indépendante</b> sous chaque roue à caler, place le <b>bouchon de pneu</b> au sommet comme butée, puis avance doucement jusqu'à ce que le pneu repose sur le plateau. Chaque pile étant montée séparément, il n'y a aucun décalage à gérer. Deux kits = 20 pièces (large réserve). La pente « Restera ~x° » tient compte de l'arrondi aux paliers.</p>
+          <p>Sous chaque pneu orange, l'app indique le <b>nombre de plaques</b> à prévoir pour cette roue (le total de l'escalier), et choisit la config dont la hauteur est la plus proche du besoin. Marches en <b>plaques carrées</b> (×), <b>plaque rectangulaire</b> pour l'amorce décalée, <b>bouchon de pneu</b> en butée au sommet. Avance doucement jusqu'à ce que le pneu repose sur le plateau du haut. La ligne sous le van donne le <b>total à monter</b> (les deux roues). Deux kits = 16 plaques : de quoi faire p. ex. 10 + 6, mais pas deux escaliers de 10. La pente « Restera ~x° » tient compte de l'arrondi aux paliers.</p>
           <p><b>Sécurité.</b> Frein à main, cales centrées, montée lente, re-vérifie avant de te garer.</p>
         </div>
       </details>
@@ -332,7 +321,7 @@
   // Repère de la bille dans le dessin : centre (x,y) et demi-amplitudes de déplacement (hx,hy)
   const C={x:160,y:250,hx:70,hy:150};
   // Numéro de version : à incrémenter à chaque évolution. Affiché dans l'en-tête et l'onglet.
-  const VERSION='1.4';
+  const VERSION='1.5';
   { const v=$('ver'); if(v)v.textContent='v'+VERSION; document.title='Niveleur van v'+VERSION; }
 
   /* ---- B. Mémorisation : on sauvegarde les réglages dans le navigateur ---- */
@@ -523,8 +512,12 @@
         // (Plus de décalage à calculer : chaque pile de plaques est montée indépendamment à sa hauteur.)
       }
     }
+    // Pour chaque roue calée : total de plaques de l'ESCALIER (soutenu jusqu'au sol).
+    // Un plateau de n plaques de haut = piles n + (n-1) + ... + 1 = n(n+1)/2 plaques.
+    chocks.forEach(ch=>{const n=ch.plates;ch.build=n*(n+1)/2;});
+    const totalBuild=chocks.reduce((s,ch)=>s+ch.build,0);  // plaques à prévoir au total (les 2 roues)
     // On renvoie tout, l'affichage (render) s'en sert.
-    return{L,W,maxH,maxReach,rA,pA,lowSide,lowEnd,level,mode2,chocks,refs,ignored,worst,anyCapped};
+    return{L,W,maxH,maxReach,rA,pA,lowSide,lowEnd,level,mode2,chocks,refs,ignored,worst,anyCapped,totalBuild};
   }
 
   /* ==================== G. AFFICHAGE (rendu du dessin) ==================== */
@@ -592,16 +585,16 @@
     c.chocks.forEach(ch=>{
       $(ch.wheel).classList.add(strong?'hotbad':'hot');
       label(ch.wheel,'role-chock',fc(ch.height),'cm');
-      const oe=$('o'+ch.wheel.slice(1));   // 'w-rl' -> 'o-rl' : nombre de plaques, SOUS le pneu
-      if(oe){ oe.textContent=ch.plates+(ch.plates>1?' plaques':' plaque'); oe.style.display=''; }
+      const oe=$('o'+ch.wheel.slice(1));   // 'w-rl' -> 'o-rl' : nb de plaques de l'escalier, SOUS le pneu
+      if(oe){ oe.textContent=ch.build+(ch.build>1?' plaques':' plaque'); oe.style.display=''; }
     });
     // 2) roue(s) de référence (vert) : "fixe" (cas 1/2) ou "réf" (cas 3 points)
     (c.refs||[]).forEach(id=>{ $(id).classList.add('fixe'); label(id,'role-fixe', c.mode2==='tripod'?'réf':'fixe'); });
     // 3) roue ignorée (gris + croix), seulement en mode 3 points
     if(c.ignored){ $(c.ignored).classList.add('ignored'); const x=$('x'+c.ignored.slice(1)); if(x)x.style.display=''; }
-    // 4) rappel discret : total de plaques à empiler + bouchon de pneu comme butée
-    const totP=c.chocks.reduce((s,ch)=>s+ch.plates,0);
-    if(totP>0){ $('stagger').textContent='Total : '+totP+' plaque'+(totP>1?'s':'')+' · bouchon de pneu en butée au sommet'; }
+    // 4) rappel : total de plaques à monter (les 2 escaliers) + bouchon en butée (+ alerte si > 2 kits)
+    const tot=c.totalBuild;
+    if(tot>0){ $('stagger').textContent='À monter : '+tot+' plaque'+(tot>1?'s':'')+' · bouchon de pneu en butée'+(tot>16?' · ⚠ dépasse 2 kits (16)':''); }
 
     // Ligne d'état : "À plat une fois calé" ou "Restera ~x°..." (honnête sur le résiduel)
     if(c.worst<TOL && !c.anyCapped){
