@@ -236,9 +236,13 @@
         <div class="field"><label for="tr">Voie (largeur)</label><div class="inp"><input id="tr" type="number" inputmode="decimal" value="168"><span class="u">cm</span></div></div>
       </div>
       <div class="fields">
-        <!-- Hauteur de cale max : au-delà, l'app plafonne. "épaisseur/plaque" : hauteur gagnée par plaque empilée (cales Berger modulables). -->
-        <div class="field half"><label for="mh">Hauteur de cale max</label><div class="inp"><input id="mh" type="number" inputmode="decimal" value="10" step="0.5"><span class="u">cm</span></div></div>
-        <div class="field half"><label for="kstep">Cale : épaisseur / plaque</label><div class="inp"><input id="kstep" type="number" inputmode="decimal" value="2.5" step="0.1"><span class="u">cm</span></div></div>
+        <!-- 1ʳᵉ plaque : hauteur de la plaque du bas (3,2). Plaque suppl. : hauteur AJOUTÉE par plaque emboîtée (2,5). -->
+        <div class="field half"><label for="kh0">1ʳᵉ plaque</label><div class="inp"><input id="kh0" type="number" inputmode="decimal" value="3.2" step="0.1"><span class="u">cm</span></div></div>
+        <div class="field half"><label for="khadd">+ plaque suppl.</label><div class="inp"><input id="khadd" type="number" inputmode="decimal" value="2.5" step="0.1"><span class="u">cm</span></div></div>
+      </div>
+      <div class="fields">
+        <!-- Hauteur de cale max : au-delà, l'app plafonne (11 par défaut pour autoriser 4 plaques = 10,7 cm). -->
+        <div class="field half"><label for="mh">Hauteur de cale max</label><div class="inp"><input id="mh" type="number" inputmode="decimal" value="11" step="0.5"><span class="u">cm</span></div></div>
       </div>
       <p id="saved" class="saved">Enregistré.</p>   <!-- petit "Enregistré." clignotant à la modif -->
     </section>
@@ -276,7 +280,33 @@
           <p><b>Sol incliné 2 sens : calage sur 3 points.</b> On prend appui sur 3 roues : la plus haute sert de référence (rien), deux roues d'une même paire réelle (un côté ou un essieu) sont calées — à deux hauteurs — pour rejoindre son niveau, et la 4ᵉ roue est ignorée (grise barrée), au sol via la suspension. Les deux axes passent à plat. La roue la plus basse peut demander une cale élevée (jusqu'à voie×tan + empattement×tan) ; au-delà du maximum réglé elle est plafonnée et la pente restante est affichée. Si un seul axe est incliné, l'app pose 2 cales égales et garde les 4 roues au sol.</p>
           <p><b>Limite de hauteur.</b> Si la cale dépasse le maximum réglé, l'app le plafonne, réduit au mieux et affiche l'inclinaison restante.</p>
           <p><b>Précision.</b> Capteurs ≈ ±1°. Pose le téléphone bien à plat, haut vers l'avant. Le signe varie selon les modèles : fie-toi à la bille, corrige avec les inversions.</p>
-          <p><b>Cales à paliers (plaques Berger).</b> Chaque plaque empilée ajoute une hauteur fixe (réglage « épaisseur / plaque » = 2,5 cm par défaut). L'app arrondit donc chaque hauteur au nombre entier de plaques le plus proche et affiche, sous chaque pneu orange, le <b>nombre de plaques</b> à empiler. Monte une pile indépendante sous chaque roue à caler (plaques carrées en escalier, plaque rectangulaire pour l'amorce), place le <b>bouchon de pneu</b> au sommet comme butée, puis avance doucement jusqu'à ce que le pneu repose sur le plateau. Deux kits = 20 pièces : de quoi caler plusieurs roues, mais la hauteur reste limitée au maximum réglé (10 cm ≈ 4 plaques). Comme chaque pile est montée séparément, il n'y a plus de décalage à gérer. La pente « Restera ~x° » affichée tient compte de l'arrondi aux plaques.</p>
+          <p><b>Cales à paliers (plaques Berger).</b> Les plaques s'emboîtent comme des Lego : la 1ʳᵉ fait <b>3,2 cm</b>, chaque plaque suivante n'ajoute que <b>2,5 cm</b> (elles se chevauchent de 0,7 cm). On alterne plaques carrées et rectangulaire pour décaler l'empilage et former une montée en escalier :</p>
+          <svg viewBox="0 0 300 172" width="100%" style="max-width:320px;display:block;margin:4px auto 2px" role="img" aria-label="Schéma d'assemblage des plaques en escalier">
+            <line x1="16" y1="140" x2="286" y2="140" stroke="var(--line)" stroke-width="1.5"/>
+            <!-- silhouette de l'escalier (plaques empilées et décalées) -->
+            <path d="M34,140 L34,111 L98,111 L98,89 L152,89 L152,71 L250,71 L250,140 Z" fill="var(--panel2)" stroke="var(--ink)" stroke-width="1.6" stroke-linejoin="round"/>
+            <line x1="34" y1="111" x2="250" y2="111" stroke="var(--line)" stroke-width="1" opacity=".6"/>
+            <line x1="98" y1="89"  x2="250" y2="89"  stroke="var(--line)" stroke-width="1" opacity=".6"/>
+            <!-- pneu sur le plateau haut -->
+            <circle cx="201" cy="47" r="23" fill="none" stroke="var(--warn)" stroke-width="5"/>
+            <circle cx="201" cy="47" r="6" fill="var(--warn)"/>
+            <!-- bouchon de pneu = butée au sommet -->
+            <rect x="251" y="46" width="15" height="94" rx="2" fill="var(--faint)"/>
+            <!-- repères de hauteur (pointillés verts) -->
+            <g stroke="var(--go)" stroke-width="1" stroke-dasharray="3 3" opacity=".9">
+              <line x1="34" y1="111" x2="16" y2="111"/><line x1="98" y1="89" x2="16" y2="89"/><line x1="152" y1="71" x2="16" y2="71"/>
+            </g>
+            <g fill="var(--go)" font-family="var(--num)" font-size="9" text-anchor="start">
+              <text x="17" y="108">3,2</text><text x="17" y="86">5,7</text><text x="17" y="68">8,2</text>
+            </g>
+            <!-- nombre de plaques par marche -->
+            <g fill="var(--mut)" font-family="var(--num)" font-size="8.5" text-anchor="middle">
+              <text x="64" y="129">1 pl.</text><text x="123" y="106">2 pl.</text><text x="175" y="86">3 pl.</text>
+            </g>
+            <text x="36" y="156" fill="var(--mut)" font-family="var(--num)" font-size="8.5">montée →</text>
+            <text x="258" y="156" fill="var(--faint)" font-family="var(--num)" font-size="8" text-anchor="middle">butée</text>
+          </svg>
+          <p>L'app affiche sous chaque pneu orange le <b>nombre de plaques</b> à empiler, et choisit le palier le plus proche du besoin : 1→3,2 · 2→5,7 · 3→8,2 · 4→10,7 cm. Monte une pile <b>indépendante</b> sous chaque roue à caler, place le <b>bouchon de pneu</b> au sommet comme butée, puis avance doucement jusqu'à ce que le pneu repose sur le plateau. Chaque pile étant montée séparément, il n'y a aucun décalage à gérer. Deux kits = 20 pièces (large réserve). La pente « Restera ~x° » tient compte de l'arrondi aux paliers.</p>
           <p><b>Sécurité.</b> Frein à main, cales centrées, montée lente, re-vérifie avant de te garer.</p>
         </div>
       </details>
@@ -302,7 +332,7 @@
   // Repère de la bille dans le dessin : centre (x,y) et demi-amplitudes de déplacement (hx,hy)
   const C={x:160,y:250,hx:70,hy:150};
   // Numéro de version : à incrémenter à chaque évolution. Affiché dans l'en-tête et l'onglet.
-  const VERSION='1.3';
+  const VERSION='1.4';
   { const v=$('ver'); if(v)v.textContent='v'+VERSION; document.title='Niveleur van v'+VERSION; }
 
   /* ---- B. Mémorisation : on sauvegarde les réglages dans le navigateur ---- */
@@ -310,7 +340,7 @@
   function load(){try{return JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){return{}}}
   // persist() : écrit tous les réglages actuels dans localStorage
   function persist(){try{localStorage.setItem(KEY,JSON.stringify({
-    wb:$('wb').value,tr:$('tr').value,mh:$('mh').value,kstep:$('kstep').value,
+    wb:$('wb').value,tr:$('tr').value,mh:$('mh').value,kh0:$('kh0').value,khadd:$('khadd').value,
     mode,flipLR,flipFB,mRoll:$('mRoll').value,mPitch:$('mPitch').value
   }))}catch(e){}}
 
@@ -323,7 +353,7 @@
   (function restore(){
     const s=load();
     if(s.wb!=null)$('wb').value=s.wb; if(s.tr!=null)$('tr').value=s.tr; if(s.mh!=null)$('mh').value=s.mh;
-    if(s.kstep!=null)$('kstep').value=s.kstep;
+    if(s.kh0!=null)$('kh0').value=s.kh0; if(s.khadd!=null)$('khadd').value=s.khadd;
     if(s.mRoll!=null)$('mRoll').value=s.mRoll; if(s.mPitch!=null)$('mPitch').value=s.mPitch;
     flipLR=!!s.flipLR; flipFB=!!s.flipFB;
     $('flipLR').classList.toggle('on',flipLR); $('flipFB').classList.toggle('on',flipFB);
@@ -446,13 +476,18 @@
     const level=rA<TOL&&pA<TOL;                          // déjà de niveau ?
     const R=W*Math.tan(rA*D2R), P=L*Math.tan(pA*D2R);     // hauteurs à combler (voir en-tête)
 
-    // --- CALES À PALIERS (plaques empilables Berger) ---
-    // Chaque plaque ajoute "step" cm ; on ne peut donc atteindre que des multiples de step.
-    // snap(besoin) : arrondit au nombre ENTIER de plaques le plus proche, sans dépasser le max.
-    const step=Math.max(0.5,parseFloat($('kstep').value)||2.5);  // épaisseur d'une plaque (cm)
-    const maxPlates=Math.max(0,Math.floor(maxH/step+1e-9));       // nb max de plaques autorisé par maxH
-    const snap=need=>{const n=Math.min(maxPlates,Math.max(0,Math.round(need/step)));return{plates:n,applied:n*step,capped:need>maxH+1e-9};};
-    // cap(besoin,distance) : cale arrondie aux paliers + pente restante (écart besoin/arrondi)
+    // --- CALES À PALIERS (plaques emboîtables Berger, montage en escalier) ---
+    // Les plaques se chevauchent : 1 plaque = h0 (3,2) ; chaque plaque en plus n'ajoute que hAdd (2,5).
+    //   hauteur d'une pile de n plaques : heightOf(n) = h0 + (n-1)·hAdd   (0 si n=0)
+    //   -> paliers atteignables : 3,2 · 5,7 · 7,7 · 10,2 · ...
+    const h0=Math.max(0.5,parseFloat($('kh0').value)||3.2);     // hauteur de la 1ʳᵉ plaque (cm)
+    const hAdd=Math.max(0.5,parseFloat($('khadd').value)||2.5); // hauteur ajoutée par plaque suppl. (cm)
+    const heightOf=n=>n<=0?0:(h0+(n-1)*hAdd);
+    let maxPlates=0; while(heightOf(maxPlates+1)<=maxH+1e-9)maxPlates++;  // nb max de plaques sous maxH
+    const maxReach=heightOf(maxPlates);                          // hauteur réelle la plus haute atteignable
+    // snap(besoin) : choisit le nb de plaques (≥1) dont la hauteur est la plus proche du besoin.
+    const snap=need=>{let best=1,bd=Infinity;for(let n=1;n<=Math.max(1,maxPlates);n++){const d=Math.abs(heightOf(n)-need);if(d<bd){bd=d;best=n;}}return{plates:best,applied:heightOf(best),capped:need>maxReach+1e-9};};
+    // cap(besoin,distance) : cale arrondie au palier + pente restante (écart besoin/palier)
     const cap=(need,dist)=>{const s=snap(need);return{applied:s.applied,plates:s.plates,resid:Math.atan(Math.abs(need-s.applied)/dist)/D2R,capped:s.capped};};
     // pos(côté,extrémité) : position (x,y) de la roue dans un repère centré sur le van (pour planeResid)
     const pos=(s,e)=>({x:(e==='avant'?L/2:-L/2),y:(s==='droite'?W/2:-W/2)});
@@ -489,7 +524,7 @@
       }
     }
     // On renvoie tout, l'affichage (render) s'en sert.
-    return{L,W,maxH,step,rA,pA,lowSide,lowEnd,level,mode2,chocks,refs,ignored,worst,anyCapped};
+    return{L,W,maxH,maxReach,rA,pA,lowSide,lowEnd,level,mode2,chocks,refs,ignored,worst,anyCapped};
   }
 
   /* ==================== G. AFFICHAGE (rendu du dessin) ==================== */
@@ -574,7 +609,7 @@
     }else{
       let t='Restera ~'+f1(c.worst)+'°';
       if(c.mode2==='side') t+=' avant-arrière'; else if(c.mode2==='end') t+=' gauche-droite';
-      if(c.anyCapped) t+=' (cale plafonnée à '+fc(c.maxH)+' cm)';
+      if(c.anyCapped) t+=' (cale plafonnée à '+fc(c.maxReach)+' cm)';
       if(c.mode2==='tripod') t+=' · 1 roue ignorée';
       setStatus(t, strong?'bad':'warn');
     }
@@ -600,7 +635,7 @@
   $('flipLR').addEventListener('click',()=>{flipLR=!flipLR;$('flipLR').classList.toggle('on',flipLR);persist();requestRender();});
   $('flipFB').addEventListener('click',()=>{flipFB=!flipFB;$('flipFB').classList.toggle('on',flipFB);persist();requestRender();});
   // À chaque modif d'un champ : mémoriser + recalculer
-  ['wb','tr','mh','kstep'].forEach(id=>$(id).addEventListener('input',()=>{persist();flashSaved();requestRender();}));
+  ['wb','tr','mh','kh0','khadd'].forEach(id=>$(id).addEventListener('input',()=>{persist();flashSaved();requestRender();}));
   ['mRoll','mPitch'].forEach(id=>$(id).addEventListener('input',()=>{persist();requestRender();}));
 
   render();   // premier affichage
