@@ -247,8 +247,9 @@
         <div class="field half"><label for="khadd">+ plaque suppl.</label><div class="inp"><input id="khadd" type="number" inputmode="decimal" value="2.5" step="0.1"><span class="u">cm</span></div></div>
       </div>
       <div class="fields">
-        <!-- Hauteur de cale max : au-delà, l'app plafonne (11,5 par défaut pour autoriser 4 plaques = 11,3 cm). -->
-        <div class="field half"><label for="mh">Hauteur de cale max</label><div class="inp"><input id="mh" type="number" inputmode="decimal" value="11.5" step="0.5"><span class="u">cm</span></div></div>
+        <!-- Hauteur max : plafond de hauteur (14 par défaut = niveau 5). Plaques dispo : total en ta possession. -->
+        <div class="field half"><label for="mh">Hauteur de cale max</label><div class="inp"><input id="mh" type="number" inputmode="decimal" value="14" step="0.5"><span class="u">cm</span></div></div>
+        <div class="field half"><label for="np">Plaques dispo</label><div class="inp"><input id="np" type="number" inputmode="numeric" value="20" step="1"><span class="u">pl.</span></div></div>
       </div>
       <p id="saved" class="saved">Enregistré.</p>   <!-- petit "Enregistré." clignotant à la modif -->
     </section>
@@ -311,28 +312,30 @@
       <div id="montageReco" class="note"><p>Active les capteurs et mesure pour voir la config à monter.</p></div>
     </section>
     <section>
-      <p class="sec-title">Les 4 configurations (par roue)</p>
-      <svg viewBox="0 0 300 136" width="100%" style="max-width:360px;display:block;margin:2px auto 6px" role="img" aria-label="Schémas de montage des plaques : 4 configurations en escalier">
+      <p class="sec-title">Les 5 configurations (par roue)</p>
+      <svg viewBox="0 0 360 140" width="100%" style="max-width:380px;display:block;margin:2px auto 6px" role="img" aria-label="Schémas de montage des plaques : 5 configurations en escalier">
         <!-- surlignage de la (des) config(s) à monter, affiché par le JS -->
         <g>
-          <rect id="hl1" x="10"  y="70" width="30" height="62" rx="6" fill="rgba(240,166,75,.16)" stroke="var(--warn)" stroke-width="1.4" stroke-dasharray="4 3" style="display:none"/>
-          <rect id="hl2" x="80"  y="70" width="36" height="62" rx="6" fill="rgba(240,166,75,.16)" stroke="var(--warn)" stroke-width="1.4" stroke-dasharray="4 3" style="display:none"/>
-          <rect id="hl3" x="148" y="70" width="50" height="62" rx="6" fill="rgba(240,166,75,.16)" stroke="var(--warn)" stroke-width="1.4" stroke-dasharray="4 3" style="display:none"/>
-          <rect id="hl4" x="224" y="70" width="66" height="62" rx="6" fill="rgba(240,166,75,.16)" stroke="var(--warn)" stroke-width="1.4" stroke-dasharray="4 3" style="display:none"/>
+          <rect id="hl1" x="9" y="72" width="20" height="63" rx="6" fill="rgba(240,166,75,.16)" stroke="var(--warn)" stroke-width="1.3" stroke-dasharray="4 3" style="display:none"/>
+          <rect id="hl2" x="61" y="72" width="30" height="63" rx="6" fill="rgba(240,166,75,.16)" stroke="var(--warn)" stroke-width="1.3" stroke-dasharray="4 3" style="display:none"/>
+          <rect id="hl3" x="119" y="72" width="40" height="63" rx="6" fill="rgba(240,166,75,.16)" stroke="var(--warn)" stroke-width="1.3" stroke-dasharray="4 3" style="display:none"/>
+          <rect id="hl4" x="187" y="72" width="50" height="63" rx="6" fill="rgba(240,166,75,.16)" stroke="var(--warn)" stroke-width="1.3" stroke-dasharray="4 3" style="display:none"/>
+          <rect id="hl5" x="267" y="72" width="60" height="63" rx="6" fill="rgba(240,166,75,.16)" stroke="var(--warn)" stroke-width="1.3" stroke-dasharray="4 3" style="display:none"/>
         </g>
-        <line x1="10" y1="104" x2="290" y2="104" stroke="var(--line)" stroke-width="1.3"/>
+        <line x1="8" y1="108" x2="340" y2="108" stroke="var(--line)" stroke-width="1.3"/>
         <!-- escaliers (une pile par marche, soutenue jusqu'au sol) -->
-        <path d="M16,104 L16,96 L27,96 L27,104 Z" fill="var(--panel2)" stroke="var(--ink)" stroke-width="1.4" stroke-linejoin="round"/>
-        <path d="M86,104 L86,96 L97,96 L97,89 L108,89 L108,104 Z" fill="var(--panel2)" stroke="var(--ink)" stroke-width="1.4" stroke-linejoin="round"/>
-        <path d="M156,104 L156,96 L167,96 L167,89 L178,89 L178,83 L189,83 L189,104 Z" fill="var(--panel2)" stroke="var(--ink)" stroke-width="1.4" stroke-linejoin="round"/>
-        <path d="M232,104 L232,96 L243,96 L243,89 L254,89 L254,83 L265,83 L265,76 L276,76 L276,104 Z" fill="var(--panel2)" stroke="var(--ink)" stroke-width="1.4" stroke-linejoin="round"/>
+        <path d="M14,108 L14,99 L24,99 L24,108 Z" fill="var(--panel2)" stroke="var(--ink)" stroke-width="1.3" stroke-linejoin="round"/>
+        <path d="M66,108 L66,99 L76,99 L76,93 L86,93 L86,108 Z" fill="var(--panel2)" stroke="var(--ink)" stroke-width="1.3" stroke-linejoin="round"/>
+        <path d="M124,108 L124,99 L134,99 L134,93 L144,93 L144,87 L154,87 L154,108 Z" fill="var(--panel2)" stroke="var(--ink)" stroke-width="1.3" stroke-linejoin="round"/>
+        <path d="M192,108 L192,99 L202,99 L202,93 L212,93 L212,87 L222,87 L222,81 L232,81 L232,108 Z" fill="var(--panel2)" stroke="var(--ink)" stroke-width="1.3" stroke-linejoin="round"/>
+        <path d="M272,108 L272,99 L282,99 L282,93 L292,93 L292,87 L302,87 L302,81 L312,81 L312,75 L322,75 L322,108 Z" fill="var(--panel2)" stroke="var(--ink)" stroke-width="1.3" stroke-linejoin="round"/>
         <!-- × = plaques carrées sur chaque marche -->
-        <g fill="var(--mut)" font-family="var(--num)" font-size="7" text-anchor="middle"><text x="22" y="102">×</text><text x="92" y="102">×</text><text x="103" y="95">×</text><text x="162" y="102">×</text><text x="173" y="95">×</text><text x="184" y="89">×</text><text x="238" y="102">×</text><text x="249" y="95">×</text><text x="260" y="89">×</text><text x="271" y="82">×</text></g>
+        <g fill="var(--mut)" font-family="var(--num)" font-size="6.5" text-anchor="middle"><text x="19" y="105">×</text><text x="71" y="105">×</text><text x="81" y="99">×</text><text x="129" y="105">×</text><text x="139" y="99">×</text><text x="149" y="93">×</text><text x="197" y="105">×</text><text x="207" y="99">×</text><text x="217" y="93">×</text><text x="227" y="87">×</text><text x="277" y="105">×</text><text x="287" y="99">×</text><text x="297" y="93">×</text><text x="307" y="87">×</text><text x="317" y="81">×</text></g>
         <!-- libellés : hauteur du plateau + total plaques par roue -->
-        <g font-family="var(--num)" text-anchor="middle"><text x="22" y="118" fill="var(--mut)" font-size="7.5">3,8 cm</text><text x="22" y="128" fill="var(--go)" font-size="8" font-weight="700">1 plaque</text><text x="97" y="118" fill="var(--mut)" font-size="7.5">6,3 cm</text><text x="97" y="128" fill="var(--go)" font-size="8" font-weight="700">3 plaques</text><text x="173" y="118" fill="var(--mut)" font-size="7.5">8,8 cm</text><text x="173" y="128" fill="var(--go)" font-size="8" font-weight="700">6 plaques</text><text x="254" y="118" fill="var(--mut)" font-size="7.5">11,3 cm</text><text x="254" y="128" fill="var(--go)" font-size="8" font-weight="700">10 plaques</text></g>
+        <g font-family="var(--num)" text-anchor="middle"><text x="19" y="122" fill="var(--mut)" font-size="7">3,8 cm</text><text x="19" y="131" fill="var(--go)" font-size="7.5" font-weight="700">1 pl.</text><text x="76" y="122" fill="var(--mut)" font-size="7">6,3 cm</text><text x="76" y="131" fill="var(--go)" font-size="7.5" font-weight="700">3 pl.</text><text x="139" y="122" fill="var(--mut)" font-size="7">8,8 cm</text><text x="139" y="131" fill="var(--go)" font-size="7.5" font-weight="700">6 pl.</text><text x="212" y="122" fill="var(--mut)" font-size="7">11,3 cm</text><text x="212" y="131" fill="var(--go)" font-size="7.5" font-weight="700">10 pl.</text><text x="297" y="122" fill="var(--mut)" font-size="7">13,8 cm</text><text x="297" y="131" fill="var(--go)" font-size="7.5" font-weight="700">15 pl.</text></g>
       </svg>
       <div class="note">
-        <p>Construis l'escalier de la config indiquée <b>sous chaque roue à caler</b> : chaque marche est une pile de plaques carrées (×) emboîtées. Avance doucement jusqu'à ce que le pneu repose sur le <b>plateau du haut</b>, puis arrête-toi. <b>20 plaques au total</b> : jusqu'à 10 + 10 (deux roues au plus haut).</p>
+        <p>Construis l'escalier de la config indiquée <b>sous chaque roue à caler</b> : chaque marche est une pile de plaques carrées (×) emboîtées. Avance doucement jusqu'à ce que le pneu repose sur le <b>plateau du haut</b>, puis arrête-toi. La <b>somme des deux escaliers ≤ 20 plaques</b> : le niveau 5 (15 pl.) n'est possible qu'avec l'autre pile à ≤ 5 pl. (p. ex. 15 + 3).</p>
       </div>
     </section>
   </div>
@@ -356,7 +359,7 @@
   // Repère de la bille dans le dessin : centre (x,y) et demi-amplitudes de déplacement (hx,hy)
   const C={x:160,y:250,hx:70,hy:150};
   // Numéro de version : à incrémenter à chaque évolution. Affiché dans l'en-tête et l'onglet.
-  const VERSION='1.8';
+  const VERSION='1.9';
   { const v=$('ver'); if(v)v.textContent='v'+VERSION; document.title='Niveleur van v'+VERSION; }
 
   /* ---- B. Mémorisation : on sauvegarde les réglages dans le navigateur ---- */
@@ -364,7 +367,7 @@
   function load(){try{return JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){return{}}}
   // persist() : écrit tous les réglages actuels dans localStorage
   function persist(){try{localStorage.setItem(KEY,JSON.stringify({
-    wb:$('wb').value,tr:$('tr').value,mh:$('mh').value,kh0:$('kh0').value,khadd:$('khadd').value,
+    wb:$('wb').value,tr:$('tr').value,mh:$('mh').value,kh0:$('kh0').value,khadd:$('khadd').value,np:$('np').value,
     mode,flipLR,flipFB,mRoll:$('mRoll').value,mPitch:$('mPitch').value
   }))}catch(e){}}
 
@@ -377,7 +380,7 @@
   (function restore(){
     const s=load();
     if(s.wb!=null)$('wb').value=s.wb; if(s.tr!=null)$('tr').value=s.tr; if(s.mh!=null)$('mh').value=s.mh;
-    if(s.kh0!=null)$('kh0').value=s.kh0; if(s.khadd!=null)$('khadd').value=s.khadd;
+    if(s.kh0!=null)$('kh0').value=s.kh0; if(s.khadd!=null)$('khadd').value=s.khadd; if(s.np!=null)$('np').value=s.np;
     if(s.mRoll!=null)$('mRoll').value=s.mRoll; if(s.mPitch!=null)$('mPitch').value=s.mPitch;
     flipLR=!!s.flipLR; flipFB=!!s.flipFB;
     $('flipLR').classList.toggle('on',flipLR); $('flipFB').classList.toggle('on',flipFB);
@@ -500,33 +503,43 @@
     const level=rA<TOL&&pA<TOL;                          // déjà de niveau ?
     const R=W*Math.tan(rA*D2R), P=L*Math.tan(pA*D2R);     // hauteurs à combler (voir en-tête)
 
-    // --- CALES À PALIERS (plaques emboîtables Berger, montage en escalier) ---
-    // Les plaques se chevauchent : 1 plaque = h0 (3,2) ; chaque plaque en plus n'ajoute que hAdd (2,5).
+    // --- CALES À PALIERS (plaques emboîtables, montage en escalier) ---
+    // Les plaques se chevauchent : 1 plaque = h0 (3,8) ; chaque plaque en plus n'ajoute que hAdd (2,5).
     //   hauteur d'une pile de n plaques : heightOf(n) = h0 + (n-1)·hAdd   (0 si n=0)
-    //   -> paliers atteignables : 3,2 · 5,7 · 7,7 · 10,2 · ...
-    const h0=Math.max(0.5,parseFloat($('kh0').value)||3.2);     // hauteur de la 1ʳᵉ plaque (cm)
+    //   -> paliers atteignables : 3,8 · 6,3 · 8,8 · 11,3 · 13,8 ...
+    const h0=Math.max(0.5,parseFloat($('kh0').value)||3.8);     // hauteur de la 1ʳᵉ plaque (cm)
     const hAdd=Math.max(0.5,parseFloat($('khadd').value)||2.5); // hauteur ajoutée par plaque suppl. (cm)
     const heightOf=n=>n<=0?0:(h0+(n-1)*hAdd);
     let maxPlates=0; while(heightOf(maxPlates+1)<=maxH+1e-9)maxPlates++;  // nb max de plaques sous maxH
     const maxReach=heightOf(maxPlates);                          // hauteur réelle la plus haute atteignable
+    // bld(n) : nb de plaques pour construire l'escalier menant au niveau n (soutenu jusqu'au sol).
+    const bld=n=>n*(n+1)/2;                                      // 1,3,6,10,15 pour n=1..5
+    // STOCK : nb total de plaques dispo. La SOMME des deux escaliers ne peut pas dépasser ce total
+    // (ex. 20 -> niveau 5 = 15 plaques possible seulement avec l'autre pile ≤ 5 plaques).
+    const STOCK=Math.max(1,Math.round(parseFloat($('np').value)||20));
     // snap(besoin) : choisit le nb de plaques (≥1) dont la hauteur est la plus proche du besoin.
     const snap=need=>{let best=1,bd=Infinity;for(let n=1;n<=Math.max(1,maxPlates);n++){const d=Math.abs(heightOf(n)-need);if(d<bd){bd=d;best=n;}}return{plates:best,applied:heightOf(best),capped:need>maxReach+1e-9};};
-    // cap(besoin,distance) : cale arrondie au palier + pente restante (écart besoin/palier)
-    const cap=(need,dist)=>{const s=snap(need);return{applied:s.applied,plates:s.plates,resid:Math.atan(Math.abs(need-s.applied)/dist)/D2R,capped:s.capped};};
+    // cap(besoin,distance,maxN) : cale arrondie au palier (≤ maxN plaques) + pente restante.
+    //   heightLimited : besoin au-delà de la hauteur max ; plateLimited : bridé par le stock de plaques.
+    const cap=(need,dist,maxN)=>{let best=1,bd=Infinity;for(let n=1;n<=Math.min(maxN,Math.max(1,maxPlates));n++){const d=Math.abs(heightOf(n)-need);if(d<bd){bd=d;best=n;}}
+      const heightLimited=need>maxReach+1e-9, plateLimited=best<snap(need).plates;
+      return{applied:heightOf(best),plates:best,resid:Math.atan(Math.abs(need-heightOf(best))/dist)/D2R,capped:heightLimited||plateLimited,heightLimited,plateLimited};};
+    // nMaxPair : plus haut niveau tenable par 2 piles ÉGALES dans le stock (2·bld(n) ≤ STOCK).
+    let nMaxPair=1; while(nMaxPair<maxPlates && 2*bld(nMaxPair+1)<=STOCK) nMaxPair++;
     // pos(côté,extrémité) : position (x,y) de la roue dans un repère centré sur le van (pour planeResid)
     const pos=(s,e)=>({x:(e==='avant'?L/2:-L/2),y:(s==='droite'?W/2:-W/2)});
     // znat(côté,extrémité) : hauteur "naturelle" du coin (avant calage), par rapport au centre
     const znat=(s,e)=>((s===highSide?R/2:-R/2)+(e===highEnd?P/2:-P/2));
 
     // Résultats à remplir
-    let chocks=[],refs=[],ignored=null,mode2='level',worst=0,anyCapped=false;
+    let chocks=[],refs=[],ignored=null,mode2='level',worst=0,anyCapped=false,heightLimited=false,plateLimited=false;
     if(!level){
       if(pA<TOL){                                 // --- CAS 1 : roulis seul ---
-        const c=cap(R,W); mode2='side'; worst=c.resid; anyCapped=c.capped;
+        const c=cap(R,W,nMaxPair); mode2='side'; worst=c.resid; anyCapped=c.capped; heightLimited=c.heightLimited; plateLimited=c.plateLimited;  // 2 piles égales -> ≤ nMaxPair
         chocks=[{wheel:wid(lowSide,'avant'),height:c.applied,plates:c.plates},{wheel:wid(lowSide,'arrière'),height:c.applied,plates:c.plates}]; // 2 cales égales, côté bas
         refs=[wid(highSide,'avant'),wid(highSide,'arrière')];  // côté haut = référence (4 roues au sol)
       }else if(rA<TOL){                           // --- CAS 2 : tangage seul ---
-        const c=cap(P,L); mode2='end'; worst=c.resid; anyCapped=c.capped;
+        const c=cap(P,L,nMaxPair); mode2='end'; worst=c.resid; anyCapped=c.capped; heightLimited=c.heightLimited; plateLimited=c.plateLimited;  // 2 piles égales -> ≤ nMaxPair
         chocks=[{wheel:wid('gauche',lowEnd),height:c.applied,plates:c.plates},{wheel:wid('droite',lowEnd),height:c.applied,plates:c.plates}]; // 2 cales égales, essieu bas
         refs=[wid('gauche',highEnd),wid('droite',highEnd)];
       }else{                                      // --- CAS 3 : les deux -> 3 POINTS ---
@@ -536,15 +549,34 @@
         const a={s:lowSide,e:lowEnd,need:R+P};
         const b=sidePair?{s:lowSide,e:highEnd,need:R}:{s:highSide,e:lowEnd,need:P};
         ignored=sidePair?wid(highSide,lowEnd):wid(lowSide,highEnd);  // la 4ᵉ roue : ignorée
-        [a,b].forEach(k=>{const s=snap(k.need);k.applied=s.applied;k.plates=s.plates;k.capped=s.capped;}); // arrondi aux paliers
-        // 3 points d'appui = référence (roue haute) + les 2 cales -> pente restante
+        // Géométrie fixe des 3 appuis (la hauteur appliquée dépend du nb de plaques choisi).
         const p1={...pos(highSide,highEnd),z:znat(highSide,highEnd)};
-        const p2={...pos(a.s,a.e),z:znat(a.s,a.e)+a.applied};
-        const p3={...pos(b.s,b.e),z:znat(b.s,b.e)+b.applied};
-        worst=planeResid(p1,p2,p3).worst; anyCapped=a.capped||b.capped;
+        const posA=pos(a.s,a.e),znA=znat(a.s,a.e), posB=pos(b.s,b.e),znB=znat(b.s,b.e);
+        // On CHERCHE le couple (na,nb) qui tient dans le stock (bld(na)+bld(nb) ≤ STOCK) et
+        // minimise la pente résiduelle du plan passant par les 3 appuis. Combinatoire ≤ 5×5.
+        // Objectif : si on peut passer SOUS tolérance, on prend le MOINS de plaques possible ;
+        // sinon on minimise la pente résiduelle. (évite de gaspiller des plaques pour 0,1°)
+        let best=null;
+        for(let na=1;na<=maxPlates;na++)for(let nb=1;nb<=maxPlates;nb++){
+          if(bld(na)+bld(nb)>STOCK) continue;
+          const w=planeResid(p1,{...posA,z:znA+heightOf(na)},{...posB,z:znB+heightOf(nb)}).worst;
+          const cand={na,nb,w,tot:bld(na)+bld(nb)};
+          if(!best){best=cand;continue;}
+          const okC=w<TOL, okB=best.w<TOL;
+          if(okC&&okB){ if(cand.tot<best.tot||(cand.tot===best.tot&&w<best.w-1e-9))best=cand; }  // tous deux OK -> moins de plaques
+          else if(okC&&!okB){ best=cand; }                                                        // ce couple atteint le niveau
+          else if(!okC&&!okB){ if(w<best.w-1e-9)best=cand; }                                       // aucun -> min pente
+        }
+        a.plates=best.na; a.applied=heightOf(best.na);
+        b.plates=best.nb; b.applied=heightOf(best.nb);
+        worst=best.w;
+        // "plafonné" si l'idéal (sans contrainte de stock) n'a pas pu être réalisé.
+        const idA=snap(a.need).plates, idB=snap(b.need).plates;
+        heightLimited=(a.need>maxReach+1e-9)||(b.need>maxReach+1e-9);
+        plateLimited=(bld(idA)+bld(idB)>STOCK);
+        anyCapped=heightLimited||plateLimited;
         chocks=[{wheel:wid(a.s,a.e),height:a.applied,plates:a.plates},{wheel:wid(b.s,b.e),height:b.applied,plates:b.plates}];
         refs=[wid(highSide,highEnd)];             // la roue la plus haute = référence
-        // (Plus de décalage à calculer : chaque pile de plaques est montée indépendamment à sa hauteur.)
       }
     }
     // Pour chaque roue calée : total de plaques de l'ESCALIER (soutenu jusqu'au sol).
@@ -557,7 +589,7 @@
     const deltaPlates=(chocks.length===2)?Math.abs(chocks[0].plates-chocks[1].plates):0;
     const deltaCm=Math.round(deltaPlates*PLATE_CM);
     // On renvoie tout, l'affichage (render) s'en sert.
-    return{L,W,maxH,maxReach,rA,pA,lowSide,lowEnd,level,mode2,chocks,refs,ignored,worst,anyCapped,totalBuild,deltaPlates,deltaCm};
+    return{L,W,maxH,maxReach,rA,pA,lowSide,lowEnd,level,mode2,chocks,refs,ignored,worst,anyCapped,heightLimited,plateLimited,totalBuild,deltaPlates,deltaCm,stock:STOCK};
   }
 
   /* ==================== G. AFFICHAGE (rendu du dessin) ==================== */
@@ -576,20 +608,21 @@
   //   phase : 'off' (capteurs à activer), 'level' (déjà de niveau), 'chock' (il faut caler)
   function montage(c,phase){
     const reco=$('montageReco'); if(!reco) return;
-    [1,2,3,4].forEach(n=>{const h=$('hl'+n);if(h)h.style.display='none';});   // on éteint les surlignages
+    [1,2,3,4,5].forEach(n=>{const h=$('hl'+n);if(h)h.style.display='none';});   // on éteint les surlignages
     if(phase==='off'){ reco.innerHTML='<p>Active les capteurs et mesure pour voir la config à monter.</p>'; return; }
     if(phase==='level'){ reco.innerHTML='<p>Van de niveau — rien à caler.</p>'; return; }
     // phase 'chock' : une ligne par roue à caler + total, et on surligne les configs utilisées
     let html='';
     c.chocks.forEach(ch=>{
-      const n=ch.plates;                                   // niveau = nb de plaques du plateau (1..4)
-      const h=$('hl'+Math.min(4,Math.max(1,n))); if(h)h.style.display='';
+      const n=ch.plates;                                   // niveau = nb de plaques du plateau (1..5)
+      const h=$('hl'+Math.min(5,Math.max(1,n))); if(h)h.style.display='';
       html+='<p><b>'+WNAME[ch.wheel]+'</b> : '+fc(ch.height)+' cm · config '+n+' · <b>'+ch.build+' plaque'+(ch.build>1?'s':'')+'</b>'+(ch.capped?' (max)':'')+'</p>';
     });
     if(c.deltaPlates>0){
       html+='<p><b>Décalage des 2 piles :</b> '+c.deltaPlates+' plaque'+(c.deltaPlates>1?'s':'')+' de 21,7 cm (~'+c.deltaCm+' cm) le long de la marche, entre les deux assemblages.</p>';
     }
-    html+='<p style="color:var(--mut)">Total à monter : <b>'+c.totalBuild+' plaque'+(c.totalBuild>1?'s':'')+'</b> (sur 20 disponibles)'+(c.totalBuild>20?' · ⚠ dépasse 20':'')+'.</p>';
+    const warn=c.worst>=TOL;   // on n'alerte que si la pente obtenue dépasse la tolérance
+    html+='<p style="color:var(--mut)">Total à monter : <b>'+c.totalBuild+' / '+c.stock+' plaques</b>'+(warn&&c.plateLimited?' · ⚠ limité par le stock':'')+(warn&&c.heightLimited?' · ⚠ hauteur max atteinte':'')+'.</p>';
     reco.innerHTML=html;
   }
   // clearWheels() : remet toutes les roues, étiquettes et croix à zéro avant de redessiner
@@ -659,20 +692,21 @@
     // 4) rappel : total de plaques à monter (les 2 escaliers) + décalage des piles (+ alerte si > 20)
     const tot=c.totalBuild;
     if(tot>0){
-      let s='À monter : '+tot+' plaque'+(tot>1?'s':'');
+      let s='À monter : '+tot+'/'+c.stock+' plaque'+(c.stock>1?'s':'');
       if(c.deltaPlates>0) s+=' · décalage des 2 piles : '+c.deltaPlates+' plaque'+(c.deltaPlates>1?'s':'')+' (~'+c.deltaCm+' cm, sens de la marche)';
-      if(tot>20) s+=' · ⚠ dépasse 20 plaques';
       $('stagger').textContent=s;
     }
     montage(c,'chock');   // tient à jour la feuille "Schéma de montage"
 
-    // Ligne d'état : "À plat une fois calé" ou "Restera ~x°..." (honnête sur le résiduel)
-    if(c.worst<TOL && !c.anyCapped){
+    // Ligne d'état : "À plat une fois calé" ou "Restera ~x°..." (honnête sur le résiduel).
+    // On se base sur la pente obtenue : si elle est sous tolérance, c'est "à plat", même si on a
+    // frôlé une limite (la cale la plus haute possible suffit déjà).
+    if(c.worst<TOL){
       setStatus('À plat une fois calé'+(c.mode2==='tripod'?' · 1 roue ignorée (pend)':''),'ok');
     }else{
       let t='Restera ~'+f1(c.worst)+'°';
       if(c.mode2==='side') t+=' avant-arrière'; else if(c.mode2==='end') t+=' gauche-droite';
-      if(c.anyCapped) t+=' (cale plafonnée à '+fc(c.maxReach)+' cm)';
+      if(c.anyCapped){ let r=[]; if(c.heightLimited)r.push('hauteur max '+fc(c.maxReach)+' cm'); if(c.plateLimited)r.push('stock '+c.stock+' plaques'); t+=' (limité : '+r.join(' + ')+')'; }
       if(c.mode2==='tripod') t+=' · 1 roue ignorée';
       setStatus(t, strong?'bad':'warn');
     }
@@ -701,7 +735,7 @@
   $('flipLR').addEventListener('click',()=>{flipLR=!flipLR;$('flipLR').classList.toggle('on',flipLR);persist();requestRender();});
   $('flipFB').addEventListener('click',()=>{flipFB=!flipFB;$('flipFB').classList.toggle('on',flipFB);persist();requestRender();});
   // À chaque modif d'un champ : mémoriser + recalculer
-  ['wb','tr','mh','kh0','khadd'].forEach(id=>$(id).addEventListener('input',()=>{persist();flashSaved();requestRender();}));
+  ['wb','tr','mh','kh0','khadd','np'].forEach(id=>$(id).addEventListener('input',()=>{persist();flashSaved();requestRender();}));
   ['mRoll','mPitch'].forEach(id=>$(id).addEventListener('input',()=>{persist();requestRender();}));
 
   render();   // premier affichage
