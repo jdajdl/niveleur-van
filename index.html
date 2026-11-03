@@ -286,7 +286,7 @@
           <p><b>Sol incliné 2 sens : calage sur 3 points.</b> On prend appui sur 3 roues : la plus haute sert de référence (rien), deux roues d'une même paire réelle (un côté ou un essieu) sont calées — à deux hauteurs — pour rejoindre son niveau, et la 4ᵉ roue est ignorée (grise barrée), au sol via la suspension. Les deux axes passent à plat. La roue la plus basse peut demander une cale élevée (jusqu'à voie×tan + empattement×tan) ; au-delà du maximum réglé elle est plafonnée et la pente restante est affichée. Si un seul axe est incliné, l'app pose 2 cales égales et garde les 4 roues au sol.</p>
           <p><b>Limite de hauteur.</b> Si la cale dépasse le maximum réglé, l'app le plafonne, réduit au mieux et affiche l'inclinaison restante.</p>
           <p><b>Précision.</b> Capteurs ≈ ±1°. Pose le téléphone bien à plat, haut vers l'avant. Le signe varie selon les modèles : fie-toi à la bille, corrige avec les inversions.</p>
-          <p><b>Cales à paliers (plaques Berger).</b> Les plaques s'emboîtent comme des Lego : la 1ʳᵉ fait <b>3,2 cm</b>, chaque plaque au-dessus n'ajoute que <b>2,5 cm</b> (chevauchement de 0,7 cm). Pour qu'une roue monte sur un plateau, on construit un <b>escalier soutenu jusqu'au sol</b> — d'où plus de plaques que la hauteur seule : 3,2 cm = 1 plaque · 5,7 = 3 · 8,2 = 6 · 10,7 = 10. Sous chaque pneu orange, l'app indique le total à prévoir pour cette roue ; la ligne sous le van donne le total des deux. <b>Appuie sur le bouton escalier (en haut) pour voir le schéma de montage</b>, avec la config à monter mise en évidence.</p>
+          <p><b>Cales à paliers (plaques Berger).</b> Les plaques s'emboîtent comme des Lego : la 1ʳᵉ fait <b>3,2 cm</b>, chaque plaque au-dessus n'ajoute que <b>2,5 cm</b> (chevauchement de 0,7 cm). Pour qu'une roue monte sur un plateau, on construit un <b>escalier soutenu jusqu'au sol</b> — d'où plus de plaques que la hauteur seule : 3,2 cm = 1 plaque · 5,7 = 3 · 8,2 = 6 · 10,7 = 10. Sous chaque pneu orange, l'app indique le total à prévoir pour cette roue ; la ligne sous le van donne le total des deux. Quand les deux roues d'une paire doivent monter de hauteurs différentes, l'app donne aussi le <b>décalage entre les 2 piles</b> = différence de plaques × 21 cm (sens de la marche). <b>Appuie sur le bouton escalier (en haut) pour voir le schéma de montage</b>, avec la config à monter mise en évidence.</p>
           <p><b>Sécurité.</b> Frein à main, cales centrées, montée lente, re-vérifie avant de te garer.</p>
         </div>
       </details>
@@ -358,7 +358,7 @@
   // Repère de la bille dans le dessin : centre (x,y) et demi-amplitudes de déplacement (hx,hy)
   const C={x:160,y:250,hx:70,hy:150};
   // Numéro de version : à incrémenter à chaque évolution. Affiché dans l'en-tête et l'onglet.
-  const VERSION='1.6';
+  const VERSION='1.7';
   { const v=$('ver'); if(v)v.textContent='v'+VERSION; document.title='Niveleur van v'+VERSION; }
 
   /* ---- B. Mémorisation : on sauvegarde les réglages dans le navigateur ---- */
@@ -553,8 +553,13 @@
     // Un plateau de n plaques de haut = piles n + (n-1) + ... + 1 = n(n+1)/2 plaques.
     chocks.forEach(ch=>{const n=ch.plates;ch.build=n*(n+1)/2;});
     const totalBuild=chocks.reduce((s,ch)=>s+ch.build,0);  // plaques à prévoir au total (les 2 roues)
+    // Décalage entre les 2 piles (le long de la marche) = différence de hauteur en plaques × 21 cm.
+    // Ex. une roue monte de 2 plaques, l'autre d'1 -> delta = 1 plaque = 21 cm.
+    const PLATE_CM=21;                                     // longueur d'une plaque carrée (cm)
+    const deltaPlates=(chocks.length===2)?Math.abs(chocks[0].plates-chocks[1].plates):0;
+    const deltaCm=deltaPlates*PLATE_CM;
     // On renvoie tout, l'affichage (render) s'en sert.
-    return{L,W,maxH,maxReach,rA,pA,lowSide,lowEnd,level,mode2,chocks,refs,ignored,worst,anyCapped,totalBuild};
+    return{L,W,maxH,maxReach,rA,pA,lowSide,lowEnd,level,mode2,chocks,refs,ignored,worst,anyCapped,totalBuild,deltaPlates,deltaCm};
   }
 
   /* ==================== G. AFFICHAGE (rendu du dessin) ==================== */
@@ -583,6 +588,9 @@
       const h=$('hl'+Math.min(4,Math.max(1,n))); if(h)h.style.display='';
       html+='<p><b>'+WNAME[ch.wheel]+'</b> : '+fc(ch.height)+' cm · config '+n+' · <b>'+ch.build+' plaque'+(ch.build>1?'s':'')+'</b>'+(ch.capped?' (max)':'')+'</p>';
     });
+    if(c.deltaPlates>0){
+      html+='<p><b>Décalage des 2 piles :</b> '+c.deltaPlates+' plaque'+(c.deltaPlates>1?'s':'')+' de 21 cm ('+c.deltaCm+' cm) le long de la marche, entre les deux assemblages.</p>';
+    }
     html+='<p style="color:var(--mut)">Total à monter : <b>'+c.totalBuild+' plaque'+(c.totalBuild>1?'s':'')+'</b> · bouchon de pneu en butée'+(c.totalBuild>16?' · ⚠ dépasse 2 kits (16)':'')+'.</p>';
     reco.innerHTML=html;
   }
@@ -652,7 +660,12 @@
     if(c.ignored){ $(c.ignored).classList.add('ignored'); const x=$('x'+c.ignored.slice(1)); if(x)x.style.display=''; }
     // 4) rappel : total de plaques à monter (les 2 escaliers) + bouchon en butée (+ alerte si > 2 kits)
     const tot=c.totalBuild;
-    if(tot>0){ $('stagger').textContent='À monter : '+tot+' plaque'+(tot>1?'s':'')+' · bouchon de pneu en butée'+(tot>16?' · ⚠ dépasse 2 kits (16)':''); }
+    if(tot>0){
+      let s='À monter : '+tot+' plaque'+(tot>1?'s':'');
+      if(c.deltaPlates>0) s+=' · décalage des 2 piles : '+c.deltaPlates+' plaque'+(c.deltaPlates>1?'s':'')+' ('+c.deltaCm+' cm, sens de la marche)';
+      s+=' · bouchon en butée'+(tot>16?' · ⚠ dépasse 2 kits (16)':'');
+      $('stagger').textContent=s;
+    }
     montage(c,'chock');   // tient à jour la feuille "Schéma de montage"
 
     // Ligne d'état : "À plat une fois calé" ou "Restera ~x°..." (honnête sur le résiduel)
