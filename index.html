@@ -236,9 +236,9 @@
         <div class="field"><label for="tr">Voie (largeur)</label><div class="inp"><input id="tr" type="number" inputmode="decimal" value="168"><span class="u">cm</span></div></div>
       </div>
       <div class="fields">
-        <!-- Hauteur de cale max : au-delà, l'app plafonne. "avance/cm" : profil de la cale (rampe droite, voir plus bas). -->
+        <!-- Hauteur de cale max : au-delà, l'app plafonne. "épaisseur/plaque" : hauteur gagnée par plaque empilée (cales Berger modulables). -->
         <div class="field half"><label for="mh">Hauteur de cale max</label><div class="inp"><input id="mh" type="number" inputmode="decimal" value="10" step="0.5"><span class="u">cm</span></div></div>
-        <div class="field half"><label for="kadv">Cale : avance / cm</label><div class="inp"><input id="kadv" type="number" inputmode="decimal" value="5.35" step="0.05"><span class="u">cm</span></div></div>
+        <div class="field half"><label for="kstep">Cale : épaisseur / plaque</label><div class="inp"><input id="kstep" type="number" inputmode="decimal" value="2.5" step="0.1"><span class="u">cm</span></div></div>
       </div>
       <p id="saved" class="saved">Enregistré.</p>   <!-- petit "Enregistré." clignotant à la modif -->
     </section>
@@ -276,7 +276,7 @@
           <p><b>Sol incliné 2 sens : calage sur 3 points.</b> On prend appui sur 3 roues : la plus haute sert de référence (rien), deux roues d'une même paire réelle (un côté ou un essieu) sont calées — à deux hauteurs — pour rejoindre son niveau, et la 4ᵉ roue est ignorée (grise barrée), au sol via la suspension. Les deux axes passent à plat. La roue la plus basse peut demander une cale élevée (jusqu'à voie×tan + empattement×tan) ; au-delà du maximum réglé elle est plafonnée et la pente restante est affichée. Si un seul axe est incliné, l'app pose 2 cales égales et garde les 4 roues au sol.</p>
           <p><b>Limite de hauteur.</b> Si la cale dépasse le maximum réglé, l'app le plafonne, réduit au mieux et affiche l'inclinaison restante.</p>
           <p><b>Précision.</b> Capteurs ≈ ±1°. Pose le téléphone bien à plat, haut vers l'avant. Le signe varie selon les modèles : fie-toi à la bille, corrige avec les inversions.</p>
-          <p><b>Décalage des cales.</b> Les deux roues montent ensemble et tu ne t'arrêtes qu'une fois : pour obtenir deux hauteurs différentes, décale les deux cales dans le sens de la marche de la valeur affichée (la plus haute est engagée en premier). Monte lentement et arrête-toi dès que l'app indique « de niveau ». Avec nos cales à rampe droite, ce décalage est <b>exact</b> : « avance / cm » = 5,35 cm (rampe de 534,82 mm pour 100 mm de haut, soit ~10,6° ; réglé dans les paramètres). Butée haute : au sommet, un plat de 16,5 cm (165,18 mm) laisse de la marge quand une cale atteint son maximum (10 cm).</p>
+          <p><b>Cales à paliers (plaques Berger).</b> Chaque plaque empilée ajoute une hauteur fixe (réglage « épaisseur / plaque » = 2,5 cm par défaut). L'app arrondit donc chaque hauteur au nombre entier de plaques le plus proche et affiche, sous chaque pneu orange, le <b>nombre de plaques</b> à empiler. Monte une pile indépendante sous chaque roue à caler (plaques carrées en escalier, plaque rectangulaire pour l'amorce), place le <b>bouchon de pneu</b> au sommet comme butée, puis avance doucement jusqu'à ce que le pneu repose sur le plateau. Deux kits = 20 pièces : de quoi caler plusieurs roues, mais la hauteur reste limitée au maximum réglé (10 cm ≈ 4 plaques). Comme chaque pile est montée séparément, il n'y a plus de décalage à gérer. La pente « Restera ~x° » affichée tient compte de l'arrondi aux plaques.</p>
           <p><b>Sécurité.</b> Frein à main, cales centrées, montée lente, re-vérifie avant de te garer.</p>
         </div>
       </details>
@@ -302,7 +302,7 @@
   // Repère de la bille dans le dessin : centre (x,y) et demi-amplitudes de déplacement (hx,hy)
   const C={x:160,y:250,hx:70,hy:150};
   // Numéro de version : à incrémenter à chaque évolution. Affiché dans l'en-tête et l'onglet.
-  const VERSION='1.2';
+  const VERSION='1.3';
   { const v=$('ver'); if(v)v.textContent='v'+VERSION; document.title='Niveleur van v'+VERSION; }
 
   /* ---- B. Mémorisation : on sauvegarde les réglages dans le navigateur ---- */
@@ -310,7 +310,7 @@
   function load(){try{return JSON.parse(localStorage.getItem(KEY)||'{}')}catch(e){return{}}}
   // persist() : écrit tous les réglages actuels dans localStorage
   function persist(){try{localStorage.setItem(KEY,JSON.stringify({
-    wb:$('wb').value,tr:$('tr').value,mh:$('mh').value,kadv:$('kadv').value,
+    wb:$('wb').value,tr:$('tr').value,mh:$('mh').value,kstep:$('kstep').value,
     mode,flipLR,flipFB,mRoll:$('mRoll').value,mPitch:$('mPitch').value
   }))}catch(e){}}
 
@@ -323,7 +323,7 @@
   (function restore(){
     const s=load();
     if(s.wb!=null)$('wb').value=s.wb; if(s.tr!=null)$('tr').value=s.tr; if(s.mh!=null)$('mh').value=s.mh;
-    if(s.kadv!=null)$('kadv').value=s.kadv;
+    if(s.kstep!=null)$('kstep').value=s.kstep;
     if(s.mRoll!=null)$('mRoll').value=s.mRoll; if(s.mPitch!=null)$('mPitch').value=s.mPitch;
     flipLR=!!s.flipLR; flipFB=!!s.flipFB;
     $('flipLR').classList.toggle('on',flipLR); $('flipFB').classList.toggle('on',flipFB);
@@ -446,23 +446,29 @@
     const level=rA<TOL&&pA<TOL;                          // déjà de niveau ?
     const R=W*Math.tan(rA*D2R), P=L*Math.tan(pA*D2R);     // hauteurs à combler (voir en-tête)
 
-    // cap(besoin,distance) : plafonne une cale à maxH et calcule la pente restante si plafonnée
-    const cap=(need,dist)=>{const applied=Math.min(need,maxH);return{applied,resid:Math.atan(Math.max(0,need-applied)/dist)/D2R,capped:need>maxH+1e-9};};
+    // --- CALES À PALIERS (plaques empilables Berger) ---
+    // Chaque plaque ajoute "step" cm ; on ne peut donc atteindre que des multiples de step.
+    // snap(besoin) : arrondit au nombre ENTIER de plaques le plus proche, sans dépasser le max.
+    const step=Math.max(0.5,parseFloat($('kstep').value)||2.5);  // épaisseur d'une plaque (cm)
+    const maxPlates=Math.max(0,Math.floor(maxH/step+1e-9));       // nb max de plaques autorisé par maxH
+    const snap=need=>{const n=Math.min(maxPlates,Math.max(0,Math.round(need/step)));return{plates:n,applied:n*step,capped:need>maxH+1e-9};};
+    // cap(besoin,distance) : cale arrondie aux paliers + pente restante (écart besoin/arrondi)
+    const cap=(need,dist)=>{const s=snap(need);return{applied:s.applied,plates:s.plates,resid:Math.atan(Math.abs(need-s.applied)/dist)/D2R,capped:s.capped};};
     // pos(côté,extrémité) : position (x,y) de la roue dans un repère centré sur le van (pour planeResid)
     const pos=(s,e)=>({x:(e==='avant'?L/2:-L/2),y:(s==='droite'?W/2:-W/2)});
     // znat(côté,extrémité) : hauteur "naturelle" du coin (avant calage), par rapport au centre
     const znat=(s,e)=>((s===highSide?R/2:-R/2)+(e===highEnd?P/2:-P/2));
 
     // Résultats à remplir
-    let chocks=[],refs=[],ignored=null,mode2='level',worst=0,anyCapped=false,stagger=0,staggerHigh=0,staggerWheel=null;
+    let chocks=[],refs=[],ignored=null,mode2='level',worst=0,anyCapped=false;
     if(!level){
       if(pA<TOL){                                 // --- CAS 1 : roulis seul ---
         const c=cap(R,W); mode2='side'; worst=c.resid; anyCapped=c.capped;
-        chocks=[{wheel:wid(lowSide,'avant'),height:c.applied},{wheel:wid(lowSide,'arrière'),height:c.applied}]; // 2 cales égales, côté bas
+        chocks=[{wheel:wid(lowSide,'avant'),height:c.applied,plates:c.plates},{wheel:wid(lowSide,'arrière'),height:c.applied,plates:c.plates}]; // 2 cales égales, côté bas
         refs=[wid(highSide,'avant'),wid(highSide,'arrière')];  // côté haut = référence (4 roues au sol)
       }else if(rA<TOL){                           // --- CAS 2 : tangage seul ---
         const c=cap(P,L); mode2='end'; worst=c.resid; anyCapped=c.capped;
-        chocks=[{wheel:wid('gauche',lowEnd),height:c.applied},{wheel:wid('droite',lowEnd),height:c.applied}]; // 2 cales égales, essieu bas
+        chocks=[{wheel:wid('gauche',lowEnd),height:c.applied,plates:c.plates},{wheel:wid('droite',lowEnd),height:c.applied,plates:c.plates}]; // 2 cales égales, essieu bas
         refs=[wid('gauche',highEnd),wid('droite',highEnd)];
       }else{                                      // --- CAS 3 : les deux -> 3 POINTS ---
         mode2='tripod';
@@ -471,26 +477,19 @@
         const a={s:lowSide,e:lowEnd,need:R+P};
         const b=sidePair?{s:lowSide,e:highEnd,need:R}:{s:highSide,e:lowEnd,need:P};
         ignored=sidePair?wid(highSide,lowEnd):wid(lowSide,highEnd);  // la 4ᵉ roue : ignorée
-        [a,b].forEach(k=>{k.applied=Math.min(k.need,maxH);k.capped=k.need>maxH+1e-9;}); // plafonnage
+        [a,b].forEach(k=>{const s=snap(k.need);k.applied=s.applied;k.plates=s.plates;k.capped=s.capped;}); // arrondi aux paliers
         // 3 points d'appui = référence (roue haute) + les 2 cales -> pente restante
         const p1={...pos(highSide,highEnd),z:znat(highSide,highEnd)};
         const p2={...pos(a.s,a.e),z:znat(a.s,a.e)+a.applied};
         const p3={...pos(b.s,b.e),z:znat(b.s,b.e)+b.applied};
         worst=planeResid(p1,p2,p3).worst; anyCapped=a.capped||b.capped;
-        chocks=[{wheel:wid(a.s,a.e),height:a.applied},{wheel:wid(b.s,b.e),height:b.applied}];
+        chocks=[{wheel:wid(a.s,a.e),height:a.applied,plates:a.plates},{wheel:wid(b.s,b.e),height:b.applied,plates:b.plates}];
         refs=[wid(highSide,highEnd)];             // la roue la plus haute = référence
-        // Décalage des 2 cales (rampe droite) dans le sens de la marche : comme les 2 roues
-        // montent ensemble, pour obtenir 2 hauteurs différentes il faut décaler les cales.
-        // Rampe linéaire -> relation EXACTE : décalage = (avance par cm) × (différence de hauteur).
-        const kadv=Math.max(0.1,parseFloat($('kadv').value)||5.35);
-        staggerHigh=Math.max(a.applied,b.applied);
-        stagger=kadv*(staggerHigh-Math.min(a.applied,b.applied));
-        // Roue de la cale la MOINS haute : c'est elle qu'on décale dans le sens de la marche.
-        staggerWheel=(a.applied<=b.applied)?wid(a.s,a.e):wid(b.s,b.e);
+        // (Plus de décalage à calculer : chaque pile de plaques est montée indépendamment à sa hauteur.)
       }
     }
     // On renvoie tout, l'affichage (render) s'en sert.
-    return{L,W,maxH,rA,pA,lowSide,lowEnd,level,mode2,chocks,refs,ignored,worst,anyCapped,stagger,staggerHigh,staggerWheel};
+    return{L,W,maxH,step,rA,pA,lowSide,lowEnd,level,mode2,chocks,refs,ignored,worst,anyCapped};
   }
 
   /* ==================== G. AFFICHAGE (rendu du dessin) ==================== */
@@ -555,17 +554,19 @@
       const u=g.querySelector('.bunit'); if(unit){u.style.display='';u.textContent=unit;} else {u.style.display='none';}
     }
     // 1) roues à caler (orange) avec leur hauteur
-    c.chocks.forEach(ch=>{ $(ch.wheel).classList.add(strong?'hotbad':'hot'); label(ch.wheel,'role-chock',fc(ch.height),'cm'); });
+    c.chocks.forEach(ch=>{
+      $(ch.wheel).classList.add(strong?'hotbad':'hot');
+      label(ch.wheel,'role-chock',fc(ch.height),'cm');
+      const oe=$('o'+ch.wheel.slice(1));   // 'w-rl' -> 'o-rl' : nombre de plaques, SOUS le pneu
+      if(oe){ oe.textContent=ch.plates+(ch.plates>1?' plaques':' plaque'); oe.style.display=''; }
+    });
     // 2) roue(s) de référence (vert) : "fixe" (cas 1/2) ou "réf" (cas 3 points)
     (c.refs||[]).forEach(id=>{ $(id).classList.add('fixe'); label(id,'role-fixe', c.mode2==='tripod'?'réf':'fixe'); });
     // 3) roue ignorée (gris + croix), seulement en mode 3 points
     if(c.ignored){ $(c.ignored).classList.add('ignored'); const x=$('x'+c.ignored.slice(1)); if(x)x.style.display=''; }
-    // 4) décalage des cales à rampe (mode 3 points) : écrit SOUS le pneu de la cale la moins haute
-    if(c.mode2==='tripod' && c.stagger>0.2 && c.staggerWheel){
-      const oe=$('o'+c.staggerWheel.slice(1));   // 'w-rl' -> 'o-rl'
-      if(oe){ oe.textContent='\u21D5 '+fc(c.stagger)+' cm'; oe.style.display=''; }
-      $('stagger').textContent='Cale la moins haute : décale-la de '+fc(c.stagger)+' cm (sens de la marche) · engage d\u2019abord la cale '+fc(c.staggerHigh)+' cm';
-    }
+    // 4) rappel discret : total de plaques à empiler + bouchon de pneu comme butée
+    const totP=c.chocks.reduce((s,ch)=>s+ch.plates,0);
+    if(totP>0){ $('stagger').textContent='Total : '+totP+' plaque'+(totP>1?'s':'')+' · bouchon de pneu en butée au sommet'; }
 
     // Ligne d'état : "À plat une fois calé" ou "Restera ~x°..." (honnête sur le résiduel)
     if(c.worst<TOL && !c.anyCapped){
@@ -599,7 +600,7 @@
   $('flipLR').addEventListener('click',()=>{flipLR=!flipLR;$('flipLR').classList.toggle('on',flipLR);persist();requestRender();});
   $('flipFB').addEventListener('click',()=>{flipFB=!flipFB;$('flipFB').classList.toggle('on',flipFB);persist();requestRender();});
   // À chaque modif d'un champ : mémoriser + recalculer
-  ['wb','tr','mh','kadv'].forEach(id=>$(id).addEventListener('input',()=>{persist();flashSaved();requestRender();}));
+  ['wb','tr','mh','kstep'].forEach(id=>$(id).addEventListener('input',()=>{persist();flashSaved();requestRender();}));
   ['mRoll','mPitch'].forEach(id=>$(id).addEventListener('input',()=>{persist();requestRender();}));
 
   render();   // premier affichage
